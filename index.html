@@ -5,123 +5,97 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SmartDoc Organizer</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
+  <style>
     body {
-      margin: 0;
       font-family: Arial, sans-serif;
-      background: #f5f7fb;
-      color: #1f2937;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 40px 20px;
+      color: #222;
     }
 
     .container {
-      max-width: 1000px;
+      max-width: 900px;
       margin: auto;
-      padding: 40px 20px;
     }
 
     h1 {
-      font-size: 36px;
       margin-bottom: 8px;
     }
 
     .subtitle {
-      color: #6b7280;
+      color: #666;
       margin-bottom: 30px;
     }
 
     .upload-box {
       background: white;
-      border: 2px dashed #9ca3af;
-      border-radius: 16px;
-      padding: 45px 20px;
+      border: 2px dashed #999;
+      border-radius: 12px;
+      padding: 40px;
       text-align: center;
-    }
-
-    .upload-box.dragover {
-      border-color: #2563eb;
-      background: #eff6ff;
-    }
-
-    .upload-box h2 {
-      margin-bottom: 10px;
-    }
-
-    .upload-box p {
-      color: #6b7280;
-    }
-
-    #fileInput {
-      display: none;
-    }
-
-    .button {
-      display: inline-block;
-      margin-top: 15px;
-      padding: 12px 22px;
-      background: #2563eb;
-      color: white;
-      border-radius: 8px;
       cursor: pointer;
-      font-weight: bold;
+      margin-bottom: 25px;
+    }
+
+    .upload-box:hover {
+      border-color: #333;
+    }
+
+    input[type="file"] {
+      margin-top: 15px;
     }
 
     .status {
-      margin-top: 20px;
-      padding: 15px;
       background: white;
-      border-radius: 10px;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
       display: none;
     }
 
-    .results {
-      margin-top: 25px;
-      display: grid;
-      gap: 20px;
-    }
-
-    .category {
+    .document {
       background: white;
-      border-radius: 14px;
+      border-radius: 12px;
       padding: 20px;
+      margin-bottom: 20px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
 
-    .file {
-      border-top: 1px solid #e5e7eb;
-      padding: 16px 0;
-    }
-
-    .original {
-      font-weight: bold;
-      word-break: break-word;
-      margin-bottom: 10px;
+    .document h2 {
+      margin-top: 0;
     }
 
     .field {
-      margin: 6px 0;
-      font-size: 14px;
+      margin: 8px 0;
     }
 
-    .suggestion {
-      margin-top: 12px;
-      padding: 12px;
-      background: #eff6ff;
-      border-radius: 8px;
-      color: #1d4ed8;
+    .label {
       font-weight: bold;
-      word-break: break-word;
     }
 
-    .empty {
-      background: white;
-      padding: 30px;
-      text-align: center;
-      color: #9ca3af;
-      border-radius: 12px;
+    .filename {
+      background: #f0f2f4;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-family: monospace;
+    }
+
+    .category {
+      display: inline-block;
+      background: #e9ecef;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    progress {
+      width: 100%;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -132,563 +106,452 @@
 
   <h1>SmartDoc Organizer</h1>
 
-  <p class="subtitle">
-    Upload documents and automatically understand and organize them.
-  </p>
-
-  <div class="upload-box" id="uploadBox">
-
-    <h2>Drop your documents here</h2>
-
-    <p>PDF text will be analyzed directly in your browser.</p>
-
-    <label class="button" for="fileInput">
-      Choose Files
-    </label>
-
-    <input
-      id="fileInput"
-      type="file"
-      multiple
-      accept=".pdf,.txt"
-    >
-
+  <div class="subtitle">
+    Upload documents and automatically understand, categorize and rename them.
   </div>
 
-  <div class="status" id="status"></div>
-
-  <div id="results" class="results">
-
-    <div class="empty">
-      No documents uploaded yet.
-    </div>
-
+  <div class="upload-box">
+    <strong>Upload your documents</strong>
+    <br>
+    <span>PDF files are supported</span>
+    <br>
+    <input type="file" id="fileInput" accept=".pdf" multiple>
   </div>
+
+  <div id="status" class="status"></div>
+
+  <div id="results"></div>
 
 </div>
 
-
 <script type="module">
 
-import * as pdfjsLib from
-"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs";
+  import * as pdfjsLib from
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs";
 
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs";
+  const fileInput = document.getElementById("fileInput");
+  const results = document.getElementById("results");
+  const status = document.getElementById("status");
 
+  function showStatus(message) {
+    status.style.display = "block";
+    status.innerHTML = message;
+  }
 
-const fileInput =
-document.getElementById("fileInput");
+  function hideStatus() {
+    status.style.display = "none";
+  }
 
-const uploadBox =
-document.getElementById("uploadBox");
+  function detectCategory(text) {
 
-const results =
-document.getElementById("results");
+    const lower = text.toLowerCase();
 
-const status =
-document.getElementById("status");
+    if (
+      lower.includes("invoice") ||
+      lower.includes("amount due") ||
+      lower.includes("subtotal") ||
+      lower.includes("tax")
+    ) {
+      return "Finance";
+    }
 
+    if (
+      lower.includes("resume") ||
+      lower.includes("curriculum vitae") ||
+      lower.includes("experience") ||
+      lower.includes("education")
+    ) {
+      return "Human Resources";
+    }
 
-fileInput.addEventListener("change", () => {
+    if (
+      lower.includes("contract") ||
+      lower.includes("agreement") ||
+      lower.includes("terms and conditions")
+    ) {
+      return "Legal";
+    }
 
-  analyzeFiles(fileInput.files);
+    if (
+      lower.includes("campaign") ||
+      lower.includes("advertising") ||
+      lower.includes("marketing")
+    ) {
+      return "Marketing";
+    }
 
-});
+    if (
+      lower.includes("purchase order") ||
+      lower.includes("shipping") ||
+      lower.includes("delivery") ||
+      lower.includes("operations")
+    ) {
+      return "Operations";
+    }
 
+    if (
+      lower.includes("receipt") ||
+      lower.includes("total")
+    ) {
+      return "Finance";
+    }
 
-uploadBox.addEventListener("dragover", event => {
+    return "Other";
+  }
 
-  event.preventDefault();
+  function extractInvoiceNumber(text) {
 
-  uploadBox.classList.add("dragover");
+    const patterns = [
+      /invoice\s*(?:number|no|#)?\s*[:\-]?\s*([A-Z0-9\-\/]+)/i,
+      /inv[\s\-]*(?:number|no|#)?\s*[:\-]?\s*([A-Z0-9\-\/]+)/i
+    ];
 
-});
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
 
+      if (match) {
+        return match[1];
+      }
+    }
 
-uploadBox.addEventListener("dragleave", () => {
+    return "Not detected";
+  }
 
-  uploadBox.classList.remove("dragover");
+  function extractDate(text) {
 
-});
+    const patterns = [
+      /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/,
+      /\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/
+    ];
 
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
 
-uploadBox.addEventListener("drop", event => {
+      if (match) {
+        return match[0];
+      }
+    }
 
-  event.preventDefault();
+    return "Not detected";
+  }
 
-  uploadBox.classList.remove("dragover");
+  function extractAmount(text) {
 
-  analyzeFiles(event.dataTransfer.files);
+    const patterns = [
+      /(?:total|amount due|grand total)[^\d]{0,20}([$€£]\s?[\d,]+(?:\.\d{2})?)/i,
+      /([$€£]\s?[\d,]+(?:\.\d{2})?)/
+    ];
 
-});
+    for (const pattern of patterns) {
 
+      const match = text.match(pattern);
 
-async function analyzeFiles(files) {
+      if (match) {
+        return match[1];
+      }
+    }
 
-  results.innerHTML = "";
+    return "Not detected";
+  }
 
-  showStatus("Starting document analysis...");
+  function extractCompany(text) {
 
+    const lines = text
+      .split(/\n+/)
+      .map(line => line.trim())
+      .filter(line => line.length > 2);
 
-  for (const file of files) {
+    const companyKeywords = [
+      "company",
+      "supplier",
+      "vendor",
+      "from",
+      "seller"
+    ];
 
-    showStatus("Reading: " + file.name);
+    for (const line of lines) {
 
+      const lower = line.toLowerCase();
+
+      for (const keyword of companyKeywords) {
+
+        if (lower.startsWith(keyword)) {
+
+          const value = line
+            .replace(new RegExp("^" + keyword, "i"), "")
+            .replace(/^[:\-\s]+/, "")
+            .trim();
+
+          if (value.length > 2) {
+            return value;
+          }
+        }
+      }
+    }
+
+    return "Not detected";
+  }
+
+  function createFilename(category, company, date, invoiceNumber) {
+
+    let type = "Document";
+
+    if (category === "Finance") {
+      type = "Invoice";
+    }
+
+    if (category === "Human Resources") {
+      type = "Resume";
+    }
+
+    if (category === "Legal") {
+      type = "Contract";
+    }
+
+    let parts = [];
+
+    if (company !== "Not detected") {
+      parts.push(company.replace(/[^a-zA-Z0-9]+/g, "-"));
+    }
+
+    parts.push(type);
+
+    if (invoiceNumber !== "Not detected") {
+      parts.push(invoiceNumber);
+    }
+
+    if (date !== "Not detected") {
+      parts.push(date.replace(/[\/]/g, "-"));
+    }
+
+    return parts.join("_") + ".pdf";
+  }
+
+  async function extractPDFText(file) {
+
+    const buffer = await file.arrayBuffer();
+
+    const pdf = await pdfjsLib
+      .getDocument({ data: buffer })
+      .promise;
+
+    let text = "";
+
+    const pagesToRead = Math.min(pdf.numPages, 10);
+
+    for (let pageNumber = 1; pageNumber <= pagesToRead; pageNumber++) {
+
+      const page = await pdf.getPage(pageNumber);
+
+      const content = await page.getTextContent();
+
+      const pageText = content.items
+        .map(item => item.str)
+        .join(" ");
+
+      text += "\n" + pageText;
+    }
+
+    return {
+      text: text.trim(),
+      pdf: pdf
+    };
+  }
+
+  async function renderPageToCanvas(pdf, pageNumber) {
+
+    const page = await pdf.getPage(pageNumber);
+
+    const viewport = page.getViewport({
+      scale: 2
+    });
+
+    const canvas = document.createElement("canvas");
+
+    const context = canvas.getContext("2d");
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({
+      canvasContext: context,
+      viewport: viewport
+    }).promise;
+
+    return canvas;
+  }
+
+  async function runOCR(pdf) {
+
+    showStatus(
+      "Scanned PDF detected. Starting OCR...<br>" +
+      "This can take a little while."
+    );
+
+    const worker = await Tesseract.createWorker("eng");
+
+    let text = "";
+
+    const pagesToRead = Math.min(pdf.numPages, 3);
+
+    for (let pageNumber = 1; pageNumber <= pagesToRead; pageNumber++) {
+
+      showStatus(
+        "OCR processing page " +
+        pageNumber +
+        " of " +
+        pagesToRead +
+        "..."
+      );
+
+      const canvas = await renderPageToCanvas(pdf, pageNumber);
+
+      const result = await worker.recognize(canvas);
+
+      text += "\n" + result.data.text;
+    }
+
+    await worker.terminate();
+
+    return text.trim();
+  }
+
+  function displayResult(file, text, usedOCR) {
+
+    const category = detectCategory(text);
+
+    const invoiceNumber = extractInvoiceNumber(text);
+
+    const date = extractDate(text);
+
+    const amount = extractAmount(text);
+
+    const company = extractCompany(text);
+
+    const suggestedFilename =
+      createFilename(
+        category,
+        company,
+        date,
+        invoiceNumber
+      );
+
+    const document = document.createElement("div");
+
+    document.className = "document";
+
+    document.innerHTML = `
+
+      <span class="category">
+        ${category}
+      </span>
+
+      <h2>${file.name}</h2>
+
+      <div class="field">
+        <span class="label">Analysis:</span>
+        ${usedOCR ? "OCR scan" : "PDF text"}
+      </div>
+
+      <div class="field">
+        <span class="label">Document type:</span>
+        ${category}
+      </div>
+
+      <div class="field">
+        <span class="label">Company:</span>
+        ${company}
+      </div>
+
+      <div class="field">
+        <span class="label">Invoice number:</span>
+        ${invoiceNumber}
+      </div>
+
+      <div class="field">
+        <span class="label">Date:</span>
+        ${date}
+      </div>
+
+      <div class="field">
+        <span class="label">Amount:</span>
+        ${amount}
+      </div>
+
+      <div class="field">
+        <span class="label">Suggested filename:</span>
+      </div>
+
+      <div class="filename">
+        ${suggestedFilename}
+      </div>
+
+    `;
+
+    results.appendChild(document);
+  }
+
+  async function processFile(file) {
 
     try {
 
-      let text = "";
+      results.innerHTML = "";
 
+      showStatus(
+        "Reading <strong>" +
+        file.name +
+        "</strong>..."
+      );
 
-      if (file.type === "application/pdf") {
+      const extracted = await extractPDFText(file);
 
-        text = await readPDF(file);
+      let text = extracted.text;
 
-      } else if (file.type === "text/plain") {
+      let usedOCR = false;
 
-        text = await file.text();
+      if (!text || text.length < 30) {
 
+        usedOCR = true;
+
+        text = await runOCR(extracted.pdf);
       }
 
+      hideStatus();
 
-      const info =
-        analyzeText(text, file.name);
-
-
-      displayResult(file.name, info);
-
+      displayResult(
+        file,
+        text,
+        usedOCR
+      );
 
     } catch (error) {
 
       console.error(error);
 
-      displayError(
-        file.name,
-        "Could not read this document."
+      showStatus(
+        "Something went wrong while reading this PDF.<br><br>" +
+        error.message
       );
+    }
+  }
 
+  fileInput.addEventListener("change", async function() {
+
+    const files = Array.from(fileInput.files);
+
+    if (!files.length) {
+      return;
     }
 
-  }
+    for (const file of files) {
 
-
-  showStatus(
-    "Finished analyzing " + files.length + " document(s)."
-  );
-
-}
-
-
-async function readPDF(file) {
-
-  const buffer =
-    await file.arrayBuffer();
-
-
-  const pdf =
-    await pdfjsLib.getDocument({
-      data: buffer
-    }).promise;
-
-
-  let text = "";
-
-
-  const pages =
-    Math.min(pdf.numPages, 10);
-
-
-  for (
-    let pageNumber = 1;
-    pageNumber <= pages;
-    pageNumber++
-  ) {
-
-    const page =
-      await pdf.getPage(pageNumber);
-
-
-    const content =
-      await page.getTextContent();
-
-
-    const pageText =
-      content.items
-        .map(item => item.str)
-        .join(" ");
-
-
-    text += pageText + "\n";
-
-  }
-
-
-  return text;
-
-}
-
-
-function analyzeText(text, filename) {
-
-  const lower =
-    (text + " " + filename).toLowerCase();
-
-
-  let type = "Document";
-  let category = "Other";
-
-
-  if (
-    lower.includes("invoice") ||
-    lower.includes("amount due") ||
-    lower.includes("invoice number")
-  ) {
-
-    type = "Invoice";
-    category = "Finance";
-
-  }
-
-  else if (
-    lower.includes("receipt") ||
-    lower.includes("payment received")
-  ) {
-
-    type = "Receipt";
-    category = "Finance";
-
-  }
-
-  else if (
-    lower.includes("contract") ||
-    lower.includes("agreement")
-  ) {
-
-    type = "Contract";
-    category = "Legal";
-
-  }
-
-  else if (
-    lower.includes("resume") ||
-    lower.includes("curriculum vitae")
-  ) {
-
-    type = "Resume";
-    category = "Human Resources";
-
-  }
-
-  else if (
-    lower.includes("marketing") ||
-    lower.includes("campaign")
-  ) {
-
-    type = "Marketing Document";
-    category = "Marketing";
-
-  }
-
-  else if (
-    lower.includes("meeting") ||
-    lower.includes("project report")
-  ) {
-
-    type = "Operations Document";
-    category = "Operations";
-
-  }
-
-
-  const invoiceNumber =
-    extractInvoiceNumber(text);
-
-
-  const date =
-    extractDate(text);
-
-
-  const amount =
-    extractAmount(text);
-
-
-  const company =
-    extractCompany(text);
-
-
-  const suggested =
-    buildFilename(
-      type,
-      company,
-      date,
-      invoiceNumber,
-      filename
-    );
-
-
-  return {
-    type,
-    category,
-    invoiceNumber,
-    date,
-    amount,
-    company,
-    suggested
-  };
-
-}
-
-
-function extractInvoiceNumber(text) {
-
-  const match =
-    text.match(
-      /invoice\s*(?:number|no\.?|#)?\s*[:\-]?\s*([A-Z0-9\-\/]+)/i
-    );
-
-
-  return match ? match[1] : "";
-
-}
-
-
-function extractDate(text) {
-
-  const patterns = [
-
-    /\b20\d{2}[-\/]\d{1,2}[-\/]\d{1,2}\b/,
-
-    /\b\d{1,2}[-\/]\d{1,2}[-\/]20\d{2}\b/,
-
-    /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+20\d{2}\b/i
-
-  ];
-
-
-  for (const pattern of patterns) {
-
-    const match =
-      text.match(pattern);
-
-    if (match) {
-      return match[0];
+      await processFile(file);
     }
 
-  }
-
-
-  return "";
-
-}
-
-
-function extractAmount(text) {
-
-  const match =
-    text.match(
-      /(?:total|amount due|total due|grand total)\s*[:\-]?\s*([$€£]\s?[\d,]+(?:\.\d{2})?)/i
-    );
-
-
-  return match ? match[1] : "";
-
-}
-
-
-function extractCompany(text) {
-
-  const lines =
-    text.split(/\n+/);
-
-
-  for (const line of lines) {
-
-    const clean =
-      line.trim();
-
-
-    if (
-      /^company\s*:/i.test(clean) ||
-      /^vendor\s*:/i.test(clean) ||
-      /^supplier\s*:/i.test(clean) ||
-      /^from\s*:/i.test(clean)
-    ) {
-
-      return clean
-        .split(":")
-        .slice(1)
-        .join(":")
-        .trim();
-
-    }
-
-  }
-
-
-  return "";
-
-}
-
-
-function buildFilename(
-  type,
-  company,
-  date,
-  invoiceNumber,
-  original
-) {
-
-  const parts = [type];
-
-
-  if (company) {
-    parts.push(company);
-  }
-
-
-  if (date) {
-    parts.push(date);
-  }
-
-
-  if (invoiceNumber) {
-    parts.push("No-" + invoiceNumber);
-  }
-
-
-  const extension =
-    original.includes(".")
-      ? original.substring(
-          original.lastIndexOf(".")
-        )
-      : ".pdf";
-
-
-  return parts
-    .map(cleanPart)
-    .join("_") +
-    extension.toLowerCase();
-
-}
-
-
-function cleanPart(value) {
-
-  return value
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .substring(0, 50);
-
-}
-
-
-function displayResult(filename, info) {
-
-  const box =
-    document.createElement("div");
-
-
-  box.className = "category";
-
-
-  box.innerHTML = `
-
-    <h2>${escapeHtml(info.category)}</h2>
-
-    <div class="file">
-
-      <div class="original">
-        ${escapeHtml(filename)}
-      </div>
-
-      <div class="field">
-        <strong>Document type:</strong>
-        ${escapeHtml(info.type)}
-      </div>
-
-      <div class="field">
-        <strong>Company:</strong>
-        ${escapeHtml(info.company || "Not detected")}
-      </div>
-
-      <div class="field">
-        <strong>Invoice number:</strong>
-        ${escapeHtml(info.invoiceNumber || "Not detected")}
-      </div>
-
-      <div class="field">
-        <strong>Date:</strong>
-        ${escapeHtml(info.date || "Not detected")}
-      </div>
-
-      <div class="field">
-        <strong>Amount:</strong>
-        ${escapeHtml(info.amount || "Not detected")}
-      </div>
-
-      <div class="suggestion">
-        Suggested filename:<br>
-        ${escapeHtml(info.suggested)}
-      </div>
-
-    </div>
-
-  `;
-
-
-  results.appendChild(box);
-
-}
-
-
-function displayError(filename, message) {
-
-  const box =
-    document.createElement("div");
-
-
-  box.className = "category";
-
-
-  box.innerHTML = `
-
-    <div class="file">
-
-      <strong>${escapeHtml(filename)}</strong>
-
-      <p>${escapeHtml(message)}</p>
-
-    </div>
-
-  `;
-
-
-  results.appendChild(box);
-
-}
-
-
-function showStatus(message) {
-
-  status.style.display = "block";
-
-  status.textContent = message;
-
-}
-
-
-function escapeHtml(text) {
-
-  const div =
-    document.createElement("div");
-
-  div.textContent = text;
-
-  return div.innerHTML;
-
-}
+  });
 
 </script>
 
