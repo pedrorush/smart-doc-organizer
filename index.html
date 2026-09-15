@@ -1,1506 +1,1729 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>SmartDoc Organizer</title>
+<title>SmartDoc Organizer</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f5f7fb;
-      color: #1f2937;
-    }
+<!-- Tesseract OCR -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 40px 20px;
-    }
+<style>
+* {
+  box-sizing: border-box;
+}
 
-    h1 {
-      margin-bottom: 8px;
-      font-size: 34px;
-    }
+body {
+  margin: 0;
+  padding: 30px 20px;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f5f7fa;
+  color: #222;
+}
 
-    .subtitle {
-      color: #6b7280;
-      margin-bottom: 30px;
-    }
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
 
-    .upload-box {
-      background: white;
-      border: 2px dashed #9ca3af;
-      border-radius: 16px;
-      padding: 50px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: 0.2s;
-    }
+h1 {
+  margin-bottom: 8px;
+}
 
-    .upload-box:hover,
-    .upload-box.dragover {
-      border-color: #2563eb;
-      background: #eff6ff;
-    }
+.subtitle {
+  color: #666;
+  margin-bottom: 25px;
+}
 
-    .upload-box strong {
-      display: block;
-      font-size: 20px;
-      margin-bottom: 8px;
-    }
+.upload-box {
+  background: white;
+  border: 2px dashed #999;
+  border-radius: 12px;
+  padding: 40px 25px;
+  text-align: center;
+  margin-bottom: 25px;
+  transition: 0.2s;
+}
 
-    .upload-box span {
-      color: #6b7280;
-    }
+.upload-box.dragover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
 
-    #fileInput {
-      display: none;
-    }
+.upload-box p {
+  margin: 8px 0;
+}
 
-    .status {
-      margin-top: 20px;
-      padding: 14px;
-      border-radius: 10px;
-      background: #eef2ff;
-      color: #3730a3;
-      display: none;
-    }
+#fileInput {
+  display: none;
+}
 
-    .results {
-      margin-top: 30px;
-    }
+.upload-button {
+  display: inline-block;
+  margin-top: 15px;
+  padding: 12px 22px;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
 
-    .result-card {
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
-    }
+.upload-button:hover {
+  background: #1d4ed8;
+}
 
-    .success {
-      color: #15803d;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
+#status {
+  margin: 20px 0;
+  padding: 15px;
+  border-radius: 8px;
+  display: none;
+}
 
-    .field {
-      margin-bottom: 16px;
-    }
+.status-info {
+  display: block !important;
+  background: #eef6ff;
+  color: #174ea6;
+}
 
-    .field label {
-      display: block;
-      font-size: 13px;
-      font-weight: bold;
-      color: #6b7280;
-      margin-bottom: 6px;
-    }
+.status-success {
+  display: block !important;
+  background: #ecfdf5;
+  color: #166534;
+}
 
-    .field input {
-      width: 100%;
-      padding: 11px 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 15px;
-    }
+.status-error {
+  display: block !important;
+  background: #fef2f2;
+  color: #991b1b;
+}
 
-    .field input:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
-    }
+.document {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  margin-top: 20px;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+}
 
-    .filename-preview {
-      background: #f3f4f6;
-      padding: 12px;
-      border-radius: 8px;
-      font-family: monospace;
-      word-break: break-word;
-    }
+.success-title {
+  color: #15803d;
+  margin-top: 0;
+}
 
-    button {
-      border: none;
-      border-radius: 9px;
-      padding: 11px 16px;
-      font-size: 14px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-right: 8px;
-      margin-top: 8px;
-    }
+.method {
+  color: #666;
+  font-size: 14px;
+}
 
-    .primary-btn {
-      background: #2563eb;
-      color: white;
-    }
+.field {
+  margin: 15px 0;
+}
 
-    .primary-btn:hover {
-      background: #1d4ed8;
-    }
+.field label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
 
-    .secondary-btn {
-      background: #e5e7eb;
-      color: #111827;
-    }
+.field input {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid #ccc;
+  border-radius: 7px;
+  font-size: 15px;
+}
 
-    .secondary-btn:hover {
-      background: #d1d5db;
-    }
+.field input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
 
-    .raw-text {
-      margin-top: 20px;
-      display: none;
-    }
+.filename-box {
+  margin-top: 25px;
+  padding: 18px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
 
-    .raw-text textarea {
-      width: 100%;
-      min-height: 220px;
-      padding: 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-family: monospace;
-      resize: vertical;
-    }
+.filename {
+  margin-top: 8px;
+  font-family: monospace;
+  word-break: break-all;
+}
 
-    .small {
-      font-size: 13px;
-      color: #6b7280;
-      margin-top: 8px;
-    }
+.copy-button {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 7px;
+  background: #111827;
+  color: white;
+  cursor: pointer;
+}
 
-    .error {
-      background: #fef2f2;
-      color: #b91c1c;
-      border-radius: 10px;
-      padding: 14px;
-      margin-top: 20px;
-      display: none;
-    }
-  </style>
+.copy-button:hover {
+  background: #374151;
+}
+
+details {
+  margin-top: 25px;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+pre {
+  margin-top: 12px;
+  padding: 15px;
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+}
+
+.progress {
+  margin-top: 15px;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #2563eb;
+  transition: width 0.2s;
+}
+
+.hidden {
+  display: none;
+}
+</style>
 </head>
 
 <body>
 
-  <div class="container">
+<div class="container">
 
-    <h1>SmartDoc Organizer</h1>
+  <h1>SmartDoc Organizer</h1>
 
-    <p class="subtitle">
-      Upload a document and SmartDoc will read, understand and organize it.
-    </p>
+  <div class="subtitle">
+    Upload a document and SmartDoc will read, understand and organize it.
+  </div>
 
-    <div
-      class="upload-box"
-      id="uploadBox"
+  <div
+    class="upload-box"
+    id="uploadBox"
+  >
+
+    <strong>Drop a PDF here</strong>
+
+    <p>or</p>
+
+    <label for="fileInput" class="upload-button">
+      Click to choose a PDF
+    </label>
+
+    <input
+      id="fileInput"
+      type="file"
+      accept="application/pdf,.pdf"
     >
-      <strong>Drop a PDF here or click to choose a PDF</strong>
-      <span>
-        SmartDoc can read normal PDFs and scanned PDFs using OCR.
-      </span>
 
-      <input
-        type="file"
-        id="fileInput"
-        accept="application/pdf,.pdf"
-      />
-    </div>
-
-    <div class="status" id="status"></div>
-
-    <div class="error" id="errorBox"></div>
-
-    <div class="results" id="results"></div>
+    <p style="margin-top:20px;color:#777;font-size:14px;">
+      SmartDoc can read normal PDFs and scanned PDFs using OCR.
+    </p>
 
   </div>
 
+  <div id="status"></div>
 
-  <!-- OCR ENGINE -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <div id="resultsBox"></div>
 
-
-  <!--
-    IMPORTANT:
-    PDF.js and the application are inside the SAME module.
-    This prevents the loading problem from the previous version.
-  -->
-  <script type="module">
-
-    import * as pdfjsLib from
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs";
-
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs";
+</div>
 
 
-    // --------------------------------------------------
-    // ELEMENTS
-    // --------------------------------------------------
+<script>
 
-    const uploadBox = document.getElementById("uploadBox");
-    const fileInput = document.getElementById("fileInput");
-    const statusBox = document.getElementById("status");
-    const errorBox = document.getElementById("errorBox");
-    const results = document.getElementById("results");
+/* =========================================================
+   SMARTDOC ORGANIZER
+   ========================================================= */
 
-
-    // --------------------------------------------------
-    // CURRENT FILE
-    // --------------------------------------------------
-
-    let currentFile = null;
+const fileInput = document.getElementById("fileInput");
+const uploadBox = document.getElementById("uploadBox");
+const statusBox = document.getElementById("status");
+const resultsBox = document.getElementById("resultsBox");
 
 
-    // --------------------------------------------------
-    // UPLOAD EVENTS
-    // --------------------------------------------------
+/* ---------------------------------------------------------
+   PDF.JS WORKER
+   --------------------------------------------------------- */
 
-    uploadBox.addEventListener("click", () => {
-      fileInput.click();
-    });
+if (window.pdfjsLib) {
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+}
 
 
-    fileInput.addEventListener("change", () => {
+/* ---------------------------------------------------------
+   STATUS
+   --------------------------------------------------------- */
 
-      if (fileInput.files.length > 0) {
-        handleFile(fileInput.files[0]);
+function showStatus(message, type = "info") {
+
+  statusBox.textContent = message;
+
+  statusBox.className = "";
+
+  if (type === "success") {
+    statusBox.classList.add("status-success");
+  } else if (type === "error") {
+    statusBox.classList.add("status-error");
+  } else {
+    statusBox.classList.add("status-info");
+  }
+}
+
+
+function clearStatus() {
+
+  statusBox.textContent = "";
+  statusBox.className = "";
+
+}
+
+
+/* ---------------------------------------------------------
+   CLEAN TEXT
+   --------------------------------------------------------- */
+
+function cleanText(text) {
+
+  if (!text) return "";
+
+  return text
+    .replace(/\u0000/g, " ")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+}
+
+
+/* ---------------------------------------------------------
+   NORMALIZE
+   --------------------------------------------------------- */
+
+function normalizeText(text) {
+
+  return (text || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+}
+
+
+/* ---------------------------------------------------------
+   DOCUMENT TYPE
+   --------------------------------------------------------- */
+
+function detectDocumentType(text) {
+
+  const t = normalizeText(text);
+
+  if (
+    t.includes("resume") ||
+    t.includes("curriculum vitae") ||
+    t.includes("cv") ||
+    t.includes("experience professionnelle") ||
+    t.includes("professional experience") ||
+    t.includes("work experience") ||
+    t.includes("education") ||
+    t.includes("formation") ||
+    t.includes("competences") ||
+    t.includes("skills")
+  ) {
+    return "Resume / CV";
+  }
+
+  if (
+    t.includes("invoice") ||
+    t.includes("facture") ||
+    t.includes("total due") ||
+    t.includes("amount due")
+  ) {
+    return "Invoice";
+  }
+
+  if (
+    t.includes("receipt") ||
+    t.includes("recu") ||
+    t.includes("reçu")
+  ) {
+    return "Receipt";
+  }
+
+  if (
+    t.includes("contract") ||
+    t.includes("contrat") ||
+    t.includes("agreement")
+  ) {
+    return "Contract";
+  }
+
+  if (
+    t.includes("marketing") ||
+    t.includes("campaign") ||
+    t.includes("promotion")
+  ) {
+    return "Marketing";
+  }
+
+  if (
+    t.includes("operations") ||
+    t.includes("procedure") ||
+    t.includes("process")
+  ) {
+    return "Operations";
+  }
+
+  return "Document";
+}
+
+
+/* ---------------------------------------------------------
+   EMAIL
+   --------------------------------------------------------- */
+
+function extractEmail(text) {
+
+  const match = text.match(
+    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
+  );
+
+  return match ? match[0] : "";
+
+}
+
+
+/* ---------------------------------------------------------
+   PHONE
+   --------------------------------------------------------- */
+
+function extractPhone(text) {
+
+  const matches = text.match(
+    /(?:\+?\d[\d\s().-]{7,}\d)/g
+  );
+
+  if (!matches) return "";
+
+  for (const value of matches) {
+
+    const digits = value.replace(/\D/g, "");
+
+    if (digits.length >= 9 && digits.length <= 15) {
+      return value.trim();
+    }
+
+  }
+
+  return "";
+
+}
+
+
+/* ---------------------------------------------------------
+   LOCATION
+   --------------------------------------------------------- */
+
+function extractLocation(text) {
+
+  const t = normalizeText(text);
+
+  const locations = [
+    "Marrakech",
+    "Marrakesh",
+    "Casablanca",
+    "Rabat",
+    "Fes",
+    "Fez",
+    "Tangier",
+    "Agadir",
+    "Meknes",
+    "Oujda",
+    "Paris",
+    "London",
+    "New York",
+    "Bellevue"
+  ];
+
+  for (const location of locations) {
+
+    if (t.includes(normalizeText(location))) {
+      return location;
+    }
+
+  }
+
+  const patterns = [
+    /location\s*[:\-]\s*([^\n]+)/i,
+    /address\s*[:\-]\s*([^\n]+)/i,
+    /adresse\s*[:\-]\s*([^\n]+)/i
+  ];
+
+  for (const pattern of patterns) {
+
+    const match = text.match(pattern);
+
+    if (match) {
+      return match[1].trim();
+    }
+
+  }
+
+  return "";
+
+}
+
+
+/* ---------------------------------------------------------
+   LANGUAGES
+   --------------------------------------------------------- */
+
+function extractLanguages(text) {
+
+  const t = normalizeText(text);
+
+  const languages = [];
+
+  const knownLanguages = [
+    ["English", "english"],
+    ["French", "french"],
+    ["Arabic", "arabic"],
+    ["Spanish", "spanish"],
+    ["German", "german"],
+    ["Italian", "italian"],
+    ["Portuguese", "portuguese"],
+    ["Dutch", "dutch"],
+    ["Russian", "russian"]
+  ];
+
+  for (const [display, search] of knownLanguages) {
+
+    if (t.includes(search)) {
+      languages.push(display);
+    }
+
+  }
+
+  return languages.join(", ");
+
+}
+
+
+/* ---------------------------------------------------------
+   BIRTH DATE
+   --------------------------------------------------------- */
+
+function extractBirthDate(text) {
+
+  const patterns = [
+
+    /date\s+de\s+naissance\s*[:\-]?\s*([^\n]+)/i,
+
+    /birth\s*date\s*[:\-]?\s*([^\n]+)/i,
+
+    /date\s+of\s+birth\s*[:\-]?\s*([^\n]+)/i,
+
+    /(\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4})/i,
+
+    /(\d{1,2}\s+(?:janvier|fevrier|février|mars|avril|mai|juin|juillet|aout|août|septembre|octobre|novembre|decembre|décembre)\s+\d{4})/i,
+
+    /(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4})/
+
+  ];
+
+  for (const pattern of patterns) {
+
+    const match = text.match(pattern);
+
+    if (match) {
+
+      return match[1]
+        .trim()
+        .replace(/\s+/g, " ");
+
+    }
+
+  }
+
+  return "";
+
+}
+
+
+/* ---------------------------------------------------------
+   PROFESSION
+   --------------------------------------------------------- */
+
+function extractProfession(text) {
+
+  const t = normalizeText(text);
+
+  const professions = [
+    ["Barman / Mixologist", [
+      "barman",
+      "mixologist",
+      "bartender",
+      "bar manager"
+    ]],
+
+    ["Manager", [
+      "manager",
+      "management",
+      "supervisor"
+    ]],
+
+    ["Accountant", [
+      "accountant",
+      "accounting",
+      "bookkeeper"
+    ]],
+
+    ["Marketing", [
+      "marketing",
+      "public relations"
+    ]],
+
+    ["Customer Service", [
+      "customer service"
+    ]],
+
+    ["Chef", [
+      "chef"
+    ]],
+
+    ["Engineer", [
+      "engineer"
+    ]],
+
+    ["Teacher", [
+      "teacher"
+    ]],
+
+    ["Developer", [
+      "developer",
+      "software engineer",
+      "programmer"
+    ]]
+
+  ];
+
+  for (const [profession, keywords] of professions) {
+
+    for (const keyword of keywords) {
+
+      if (t.includes(keyword)) {
+        return profession;
       }
 
-    });
+    }
+
+  }
+
+  return "";
+
+}
 
 
-    uploadBox.addEventListener("dragover", (event) => {
+/* ---------------------------------------------------------
+   NAME
+   --------------------------------------------------------- */
 
-      event.preventDefault();
+function extractName(text) {
 
-      uploadBox.classList.add("dragover");
+  const lines = text
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean);
 
-    });
+  /*
+    First look for explicit labels.
+  */
 
+  const labelPatterns = [
+    /^(?:name|nom)\s*[:\-]\s*(.+)$/i,
+    /^(?:full name|nom complet)\s*[:\-]\s*(.+)$/i
+  ];
 
-    uploadBox.addEventListener("dragleave", () => {
+  for (const line of lines) {
 
-      uploadBox.classList.remove("dragover");
+    for (const pattern of labelPatterns) {
 
-    });
+      const match = line.match(pattern);
 
-
-    uploadBox.addEventListener("drop", (event) => {
-
-      event.preventDefault();
-
-      uploadBox.classList.remove("dragover");
-
-      const files = event.dataTransfer.files;
-
-      if (files.length > 0) {
-        handleFile(files[0]);
+      if (match) {
+        return match[1].trim();
       }
 
-    });
+    }
+
+  }
 
 
-    // --------------------------------------------------
-    // HANDLE FILE
-    // --------------------------------------------------
+  /*
+    Ignore obvious non-name lines.
+  */
 
-    async function handleFile(file) {
+  const badWords = [
+    "resume",
+    "curriculum",
+    "curriculum vitae",
+    "experience",
+    "experiences",
+    "professional",
+    "education",
+    "formation",
+    "skills",
+    "competences",
+    "languages",
+    "langues",
+    "contact",
+    "email",
+    "phone",
+    "telephone",
+    "address",
+    "marrakech",
+    "morocco",
+    "maroc",
+    "barman",
+    "mixologist",
+    "manager",
+    "sample",
+    "revision"
+  ];
 
-      hideError();
 
-      results.innerHTML = "";
+  /*
+    Prefer a short all-uppercase name.
+  */
 
-      currentFile = file;
+  for (const line of lines.slice(0, 30)) {
 
-      if (!file.name.toLowerCase().endsWith(".pdf")) {
+    const cleaned = line
+      .replace(/[^A-Za-zÀ-ÿ' -]/g, "")
+      .trim();
 
-        showError("Please upload a PDF file.");
+    if (
+      cleaned &&
+      cleaned.length >= 3 &&
+      cleaned.length <= 45 &&
+      cleaned === cleaned.toUpperCase() &&
+      /^[A-ZÀ-Ÿ' -]+$/.test(cleaned)
+    ) {
 
-        return;
+      const lower = normalizeText(cleaned);
+
+      if (
+        !badWords.some(word =>
+          lower.includes(normalizeText(word))
+        )
+      ) {
+        return cleaned;
       }
 
+    }
+
+  }
+
+
+  /*
+    Look for 2-4 word name-like lines.
+  */
+
+  for (const line of lines.slice(0, 25)) {
+
+    const cleaned = line
+      .replace(/[^A-Za-zÀ-ÿ' -]/g, "")
+      .trim();
+
+    const words = cleaned.split(/\s+/);
+
+    if (
+      words.length >= 2 &&
+      words.length <= 4 &&
+      cleaned.length <= 45
+    ) {
+
+      const lower = normalizeText(cleaned);
+
+      if (
+        !badWords.some(word =>
+          lower.includes(normalizeText(word))
+        )
+      ) {
+
+        const looksLikeName =
+          words.every(word =>
+            /^[A-ZÀ-Ÿ][A-Za-zÀ-ÿ'’-]*$/.test(word)
+          );
+
+        if (looksLikeName) {
+          return cleaned;
+        }
+
+      }
+
+    }
+
+  }
+
+  return "";
+
+}
+
+
+/* ---------------------------------------------------------
+   SAFE FILENAME
+   --------------------------------------------------------- */
+
+function safeFilenamePart(value) {
+
+  return (value || "")
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+}
+
+
+/* ---------------------------------------------------------
+   MAKE FILENAME
+   --------------------------------------------------------- */
+
+function makeFilename(
+  type,
+  name,
+  profession,
+  location
+) {
+
+  const parts = [];
+
+  const cleanName = safeFilenamePart(name);
+  const cleanProfession = safeFilenamePart(profession);
+  const cleanLocation = safeFilenamePart(location);
+
+  if (cleanName) {
+    parts.push(cleanName);
+  }
+
+  if (cleanProfession) {
+    parts.push(cleanProfession);
+  }
+
+  if (type) {
+
+    const cleanType =
+      safeFilenamePart(type);
+
+    if (cleanType) {
+      parts.push(cleanType);
+    }
+
+  }
+
+  if (cleanLocation) {
+    parts.push(cleanLocation);
+  }
+
+  if (parts.length === 0) {
+    return "SmartDoc-Document.pdf";
+  }
+
+  return parts.join("_") + ".pdf";
+
+}
+
+
+/* ---------------------------------------------------------
+   EXTRACT TEXT FROM NORMAL PDF
+   --------------------------------------------------------- */
+
+async function extractPdfText(file) {
+
+  if (!window.pdfjsLib) {
+    throw new Error("PDF.js failed to load.");
+  }
+
+  const arrayBuffer =
+    await file.arrayBuffer();
+
+  const pdf =
+    await pdfjsLib.getDocument({
+      data: arrayBuffer
+    }).promise;
+
+  let fullText = "";
+
+  for (
+    let pageNumber = 1;
+    pageNumber <= pdf.numPages;
+    pageNumber++
+  ) {
+
+    const page =
+      await pdf.getPage(pageNumber);
+
+    const content =
+      await page.getTextContent();
+
+    const pageText =
+      content.items
+        .map(item => item.str || "")
+        .join(" ");
+
+    fullText +=
+      pageText + "\n";
+
+  }
+
+  return cleanText(fullText);
+
+}
+
+
+/* ---------------------------------------------------------
+   RENDER PDF PAGE
+   --------------------------------------------------------- */
+
+async function renderPageToCanvas(
+  pdf,
+  pageNumber
+) {
+
+  const page =
+    await pdf.getPage(pageNumber);
+
+  const viewport =
+    page.getViewport({
+      scale: 2
+    });
+
+  const canvas =
+    document.createElement("canvas");
+
+  const context =
+    canvas.getContext("2d");
+
+  canvas.width =
+    viewport.width;
+
+  canvas.height =
+    viewport.height;
+
+  await page.render({
+    canvasContext: context,
+    viewport: viewport
+  }).promise;
+
+  return canvas;
+
+}
+
+
+/* ---------------------------------------------------------
+   OCR PDF
+   --------------------------------------------------------- */
+
+async function ocrPdf(file) {
+
+  if (!window.Tesseract) {
+    throw new Error("OCR library failed to load.");
+  }
+
+  if (!window.pdfjsLib) {
+    throw new Error("PDF.js failed to load.");
+  }
+
+  const arrayBuffer =
+    await file.arrayBuffer();
+
+  const pdf =
+    await pdfjsLib.getDocument({
+      data: arrayBuffer
+    }).promise;
+
+
+  showStatus(
+    "Scanned PDF detected. Starting OCR...",
+    "info"
+  );
+
+
+  /*
+    English + French works well for the CVs
+    you have been testing.
+  */
+
+  const worker =
+    await Tesseract.createWorker(
+      "eng+fra",
+      1,
+      {
+        logger: message => {
+
+          if (
+            message.status ===
+            "recognizing text"
+          ) {
+
+            const percent =
+              Math.round(
+                (message.progress || 0) * 100
+              );
+
+            showStatus(
+              "OCR in progress: " +
+              percent +
+              "%",
+              "info"
+            );
+
+          }
+
+        }
+      }
+    );
+
+
+  let fullText = "";
+
+
+  try {
+
+    for (
+      let pageNumber = 1;
+      pageNumber <= pdf.numPages;
+      pageNumber++
+    ) {
+
+      showStatus(
+        "OCR: reading page " +
+        pageNumber +
+        " of " +
+        pdf.numPages +
+        "...",
+        "info"
+      );
+
+
+      const canvas =
+        await renderPageToCanvas(
+          pdf,
+          pageNumber
+        );
+
+
+      const result =
+        await worker.recognize(
+          canvas
+        );
+
+
+      if (
+        result &&
+        result.data &&
+        result.data.text
+      ) {
+
+        fullText +=
+          result.data.text +
+          "\n\n";
+
+      }
+
+    }
+
+  } finally {
+
+    await worker.terminate();
+
+  }
+
+
+  return cleanText(fullText);
+
+}
+
+
+/* ---------------------------------------------------------
+   DISPLAY RESULT
+   --------------------------------------------------------- */
+
+function displayResult(
+  file,
+  text,
+  usedOCR
+) {
+
+  const clean =
+    cleanText(text);
+
+  const type =
+    detectDocumentType(clean);
+
+  const name =
+    extractName(clean);
+
+  const profession =
+    extractProfession(clean);
+
+  const location =
+    extractLocation(clean);
+
+  const email =
+    extractEmail(clean);
+
+  const phone =
+    extractPhone(clean);
+
+  const languages =
+    extractLanguages(clean);
+
+  const birthDate =
+    extractBirthDate(clean);
+
+
+  resultsBox.innerHTML = "";
+
+
+  const card =
+    document.createElement("div");
+
+  card.className =
+    "document";
+
+
+  const title =
+    document.createElement("h2");
+
+  title.className =
+    "success-title";
+
+  title.textContent =
+    "✓ Document successfully analyzed";
+
+  card.appendChild(title);
+
+
+  const fileName =
+    document.createElement("p");
+
+  fileName.textContent =
+    file.name;
+
+  card.appendChild(fileName);
+
+
+  const method =
+    document.createElement("p");
+
+  method.className =
+    "method";
+
+  method.textContent =
+    "Analysis method: " +
+    (usedOCR ? "OCR" : "PDF text");
+
+  card.appendChild(method);
+
+
+  const line =
+    document.createElement("hr");
+
+  card.appendChild(line);
+
+
+  function createField(
+    labelText,
+    value,
+    id
+  ) {
+
+    const wrapper =
+      document.createElement("div");
+
+    wrapper.className =
+      "field";
+
+
+    const label =
+      document.createElement("label");
+
+    label.textContent =
+      labelText;
+
+
+    const input =
+      document.createElement("input");
+
+    input.type =
+      "text";
+
+    input.id =
+      id;
+
+    input.value =
+      value || "";
+
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(input);
+
+    card.appendChild(wrapper);
+
+    return input;
+
+  }
+
+
+  const typeInput =
+    createField(
+      "Document type",
+      type,
+      "editType"
+    );
+
+
+  const nameInput =
+    createField(
+      "Name",
+      name,
+      "editName"
+    );
+
+
+  const professionInput =
+    createField(
+      "Profession",
+      profession,
+      "editProfession"
+    );
+
+
+  const locationInput =
+    createField(
+      "Location",
+      location,
+      "editLocation"
+    );
+
+
+  const emailInput =
+    createField(
+      "Email",
+      email,
+      "editEmail"
+    );
+
+
+  const phoneInput =
+    createField(
+      "Phone",
+      phone,
+      "editPhone"
+    );
+
+
+  const languagesInput =
+    createField(
+      "Languages",
+      languages,
+      "editLanguages"
+    );
+
+
+  const birthDateInput =
+    createField(
+      "Birth date",
+      birthDate,
+      "editBirthDate"
+    );
+
+
+  /*
+    Suggested filename
+  */
+
+  const filenameBox =
+    document.createElement("div");
+
+  filenameBox.className =
+    "filename-box";
+
+
+  const filenameTitle =
+    document.createElement("strong");
+
+  filenameTitle.textContent =
+    "Suggested filename:";
+
+
+  const filename =
+    document.createElement("div");
+
+  filename.className =
+    "filename";
+
+
+  filenameBox.appendChild(
+    filenameTitle
+  );
+
+  filenameBox.appendChild(
+    filename
+  );
+
+  card.appendChild(
+    filenameBox
+  );
+
+
+  /*
+    Copy button
+  */
+
+  const copyButton =
+    document.createElement("button");
+
+  copyButton.className =
+    "copy-button";
+
+  copyButton.textContent =
+    "Copy filename";
+
+  card.appendChild(
+    copyButton
+  );
+
+
+  /*
+    Raw text
+  */
+
+  const details =
+    document.createElement("details");
+
+
+  const summary =
+    document.createElement("summary");
+
+  summary.textContent =
+    usedOCR
+      ? "Show raw OCR text"
+      : "Show raw PDF text";
+
+
+  const rawText =
+    document.createElement("pre");
+
+  rawText.textContent =
+    clean || "(No text detected.)";
+
+
+  details.appendChild(
+    summary
+  );
+
+  details.appendChild(
+    rawText
+  );
+
+  card.appendChild(
+    details
+  );
+
+
+  resultsBox.appendChild(
+    card
+  );
+
+
+  /*
+    Filename updates whenever
+    an editable field changes.
+  */
+
+  function updateFilename() {
+
+    filename.textContent =
+      makeFilename(
+        typeInput.value,
+        nameInput.value,
+        professionInput.value,
+        locationInput.value
+      );
+
+  }
+
+
+  typeInput.addEventListener(
+    "input",
+    updateFilename
+  );
+
+  nameInput.addEventListener(
+    "input",
+    updateFilename
+  );
+
+  professionInput.addEventListener(
+    "input",
+    updateFilename
+  );
+
+  locationInput.addEventListener(
+    "input",
+    updateFilename
+  );
+
+
+  /*
+    Copy filename
+  */
+
+  copyButton.addEventListener(
+    "click",
+    async function() {
 
       try {
 
-        showStatus("Loading PDF...");
-
-        const arrayBuffer = await file.arrayBuffer();
-
-        const pdf = await pdfjsLib.getDocument({
-          data: arrayBuffer
-        }).promise;
-
-
-        showStatus(
-          `PDF loaded successfully. ${pdf.numPages} page(s) found.`
+        await navigator.clipboard.writeText(
+          filename.textContent
         );
 
+        copyButton.textContent =
+          "✓ Copied";
 
-        // --------------------------------------------------
-        // FIRST: TRY NORMAL PDF TEXT
-        // --------------------------------------------------
+        setTimeout(
+          function() {
 
-        let extractedText = "";
+            copyButton.textContent =
+              "Copy filename";
 
-        const pagesToRead = Math.min(pdf.numPages, 10);
-
-        for (let pageNumber = 1; pageNumber <= pagesToRead; pageNumber++) {
-
-          showStatus(
-            `Reading PDF text... page ${pageNumber} of ${pagesToRead}`
-          );
-
-          const page = await pdf.getPage(pageNumber);
-
-          const textContent = await page.getTextContent();
-
-          const pageText = textContent.items
-            .map(item => item.str || "")
-            .join(" ");
-
-          extractedText += "\n" + pageText;
-        }
-
-
-        extractedText = cleanText(extractedText);
-
-
-        // --------------------------------------------------
-        // IF PDF HAS VERY LITTLE TEXT -> OCR
-        // --------------------------------------------------
-
-        let usedOCR = false;
-
-        if (extractedText.replace(/\s/g, "").length < 30) {
-
-          usedOCR = true;
-
-          showStatus(
-            "This looks like a scanned PDF. Starting OCR..."
-          );
-
-          extractedText = await runOCR(pdf);
-
-          extractedText = cleanText(extractedText);
-        }
-
-
-        if (!extractedText.trim()) {
-
-          showError(
-            "SmartDoc could not extract readable text from this PDF."
-          );
-
-          return;
-        }
-
-
-        displayResult(
-          file,
-          extractedText,
-          usedOCR
+          },
+          1500
         );
-
-
-        showStatus("Document successfully analyzed.");
 
       } catch (error) {
 
-        console.error(error);
+        /*
+          Fallback for browsers
+          where clipboard is unavailable.
+        */
 
-        showError(
-          "Something went wrong while analyzing the PDF. Please try again."
-        );
+        const temp =
+          document.createElement("textarea");
 
-      }
+        temp.value =
+          filename.textContent;
 
-    }
+        document.body.appendChild(temp);
 
+        temp.select();
 
-    // --------------------------------------------------
-    // OCR
-    // --------------------------------------------------
+        document.execCommand("copy");
 
-    async function runOCR(pdf) {
+        temp.remove();
 
-      if (!window.Tesseract) {
+        copyButton.textContent =
+          "✓ Copied";
 
-        throw new Error(
-          "Tesseract OCR did not load."
-        );
-      }
-
-
-      let ocrText = "";
-
-      const pagesToOCR = Math.min(pdf.numPages, 3);
-
-
-      const worker = await Tesseract.createWorker(
-        "eng",
-        1,
-        {
-          logger: message => {
-
-            if (
-              message.status &&
-              typeof message.progress === "number"
-            ) {
-
-              const percent =
-                Math.round(message.progress * 100);
-
-              showStatus(
-                `OCR: ${message.status} — ${percent}%`
-              );
-
-            }
-
-          }
-        }
-      );
-
-
-      try {
-
-        for (
-          let pageNumber = 1;
-          pageNumber <= pagesToOCR;
-          pageNumber++
-        ) {
-
-          showStatus(
-            `Preparing scanned page ${pageNumber} of ${pagesToOCR}...`
-          );
-
-
-          const page = await pdf.getPage(pageNumber);
-
-
-          const viewport = page.getViewport({
-            scale: 2.5
-          });
-
-
-          const canvas = document.createElement("canvas");
-
-          const context = canvas.getContext("2d");
-
-
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-
-
-          await page.render({
-            canvasContext: context,
-            viewport: viewport
-          }).promise;
-
-
-          showStatus(
-            `OCR scanning page ${pageNumber} of ${pagesToOCR}...`
-          );
-
-
-          const result = await worker.recognize(canvas);
-
-          ocrText += "\n" + result.data.text;
-
-
-          canvas.width = 1;
-          canvas.height = 1;
-        }
-
-      } finally {
-
-        await worker.terminate();
-
-      }
-
-
-      return ocrText;
-
-    }
-
-
-    // --------------------------------------------------
-    // CLEAN TEXT
-    // --------------------------------------------------
-
-    function cleanText(text) {
-
-      return text
-        .replace(/\r/g, "\n")
-        .replace(/[ \t]+/g, " ")
-        .replace(/\n\s*\n\s*\n+/g, "\n\n")
-        .trim();
-
-    }
-
-
-    // --------------------------------------------------
-    // DOCUMENT TYPE
-    // --------------------------------------------------
-
-    function detectDocumentType(text) {
-
-      const lower =
-        text.toLowerCase()
-          .replace(/\s+/g, " ")
-          .trim();
-
-
-      // INVOICE
-
-      if (
-        /\binvoice\s*(number|no|#|date)?\b/i.test(lower) ||
-        /\bfacture\s*(n°|no|numero|numéro|date)?\b/i.test(lower) ||
-        /\btotal\s+(due|amount|ttc)\b/i.test(lower)
-      ) {
-
-        return "Invoice";
-      }
-
-
-      // RECEIPT
-
-      if (
-        /\breceipt\b/i.test(lower) ||
-        /\breçu\b/i.test(lower) ||
-        /\bticket\s+de\s+caisse\b/i.test(lower)
-      ) {
-
-        return "Receipt";
-      }
-
-
-      // RESUME / CV
-
-      const resumeSignals = [
-
-        /\bresume\b/i,
-        /\bcurriculum vitae\b/i,
-        /\bresume samples\b/i,
-        /\bwork history\b/i,
-        /\bprofessional accomplishments\b/i,
-        /\bprofessional experience\b/i,
-        /\bprofessional experiences\b/i,
-        /\bexperiences professionnelles\b/i,
-        /\beducation\b/i,
-        /\bsummary of qualifications\b/i,
-        /\bcompétences\b/i,
-        /\blangues\b/i
-
-      ];
-
-
-      let resumeScore = 0;
-
-      for (const signal of resumeSignals) {
-
-        if (signal.test(lower)) {
-          resumeScore++;
-        }
-
-      }
-
-
-      if (resumeScore >= 2) {
-
-        return "Resume / CV";
-      }
-
-
-      // CONTRACT
-
-      const contractSignals = [
-
-        /\bcontract\b/i,
-        /\bagreement\b/i,
-        /\bcontrat\b/i,
-        /\bparties\b.*\bagree\b/i,
-        /\bterms and conditions\b/i,
-        /\bsignature\b.*\bdate\b/i
-
-      ];
-
-
-      let contractScore = 0;
-
-      for (const signal of contractSignals) {
-
-        if (signal.test(lower)) {
-          contractScore++;
-        }
-
-      }
-
-
-      if (contractScore >= 2) {
-
-        return "Contract";
-      }
-
-
-      // MARKETING
-
-      if (
-        /\bmarketing campaign\b/i.test(lower) ||
-        /\bmarketing plan\b/i.test(lower) ||
-        /\bcampagne marketing\b/i.test(lower)
-      ) {
-
-        return "Marketing";
-      }
-
-
-      // OPERATIONS
-
-      if (
-        /\boperations report\b/i.test(lower) ||
-        /\boperations manual\b/i.test(lower) ||
-        /\bprocédure opérationnelle\b/i.test(lower)
-      ) {
-
-        return "Operations";
-      }
-
-
-      return "Document";
-
-    }
-
-
-    // --------------------------------------------------
-    // FIELD EXTRACTION
-    // --------------------------------------------------
-
-    function extractEmail(text) {
-
-      const match = text.match(
-        /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
-      );
-
-      return match ? match[0] : "";
-
-    }
-
-
-    function extractPhone(text) {
-
-      const matches = text.match(
-        /(?:\+?\d[\d\s().-]{7,}\d)/g
-      );
-
-
-      if (!matches) {
-        return "";
-      }
-
-
-      return matches
-        .map(value => value.trim())
-        .find(value => value.replace(/\D/g, "").length >= 8) || "";
-
-    }
-
-
-    function extractLocation(text) {
-
-      const lower = text.toLowerCase();
-
-
-      const locations = [
-
-        "Marrakech",
-        "Marrakesh",
-        "Casablanca",
-        "Rabat",
-        "Agadir",
-        "Tangier",
-        "Fes",
-        "Fez",
-        "Meknes",
-        "Oujda",
-        "Paris",
-        "London",
-        "New York",
-        "Dubai",
-        "Bellevue",
-        "Nebraska"
-
-      ];
-
-
-      for (const location of locations) {
-
-        if (
-          lower.includes(location.toLowerCase())
-        ) {
-
-          return location;
-        }
-
-      }
-
-
-      return "";
-
-    }
-
-
-    function extractProfession(text) {
-
-      const lower = text.toLowerCase();
-
-
-      const professions = [
-
-        {
-          keywords: [
-            "barman",
-            "mixologue",
-            "mixologist"
-          ],
-          name: "Barman / Mixologist"
-        },
-
-        {
-          keywords: [
-            "manager",
-            "management"
-          ],
-          name: "Manager"
-        },
-
-        {
-          keywords: [
-            "developer",
-            "software engineer",
-            "web developer"
-          ],
-          name: "Developer"
-        },
-
-        {
-          keywords: [
-            "accountant",
-            "comptable"
-          ],
-          name: "Accountant"
-        },
-
-        {
-          keywords: [
-            "designer",
-            "graphic designer"
-          ],
-          name: "Designer"
-        },
-
-        {
-          keywords: [
-            "sales",
-            "commercial"
-          ],
-          name: "Sales"
-        },
-
-        {
-          keywords: [
-            "marketing"
-          ],
-          name: "Marketing"
-        }
-
-      ];
-
-
-      for (const profession of professions) {
-
-        for (const keyword of profession.keywords) {
-
-          if (
-            lower.includes(keyword)
-          ) {
-
-            return profession.name;
-          }
-
-        }
-
-      }
-
-
-      return "";
-
-    }
-
-
-    function extractName(text) {
-
-      const lines = text
-        .split("\n")
-        .map(line => line.trim())
-        .filter(Boolean);
-
-
-      const blockedWords = [
-
-        "resume",
-        "curriculum",
-        "vitae",
-        "education",
-        "experience",
-        "experiences",
-        "professional",
-        "skills",
-        "compétences",
-        "langues",
-        "languages",
-        "contact",
-        "phone",
-        "email",
-        "address",
-        "barman",
-        "mixologist",
-        "manager",
-        "sample"
-
-      ];
-
-
-      for (
-        let i = 0;
-        i < Math.min(lines.length, 20);
-        i++
-      ) {
-
-        const line = lines[i];
-
-
-        if (line.length < 3 || line.length > 50) {
-          continue;
-        }
-
-
-        if (/@/.test(line)) {
-          continue;
-        }
-
-
-        if (/\d/.test(line)) {
-          continue;
-        }
-
-
-        const lower = line.toLowerCase();
-
-
-        if (
-          blockedWords.some(word =>
-            lower.includes(word)
-          )
-        ) {
-
-          continue;
-        }
-
-
-        const words = line.split(/\s+/);
-
-
-        if (
-          words.length >= 2 &&
-          words.length <= 5
-        ) {
-
-          return line;
-        }
-
-      }
-
-
-      return "";
-
-    }
-
-
-    // --------------------------------------------------
-    // FILENAME
-    // --------------------------------------------------
-
-    function safeFilenamePart(value) {
-
-      return value
-        .trim()
-        .replace(/[<>:"/\\|?*]+/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-
-    }
-
-
-    function generateFilename(
-      type,
-      name,
-      profession,
-      location
-    ) {
-
-      const parts = [];
-
-
-      if (name) {
-        parts.push(
-          safeFilenamePart(name)
-        );
-      }
-
-
-      if (profession) {
-        parts.push(
-          safeFilenamePart(profession)
-        );
-      }
-
-
-      if (type) {
-
-        parts.push(
-          safeFilenamePart(type)
-        );
-
-      }
-
-
-      if (location) {
-
-        parts.push(
-          safeFilenamePart(location)
-        );
-
-      }
-
-
-      if (parts.length === 0) {
-
-        return "Organized-Document.pdf";
-      }
-
-
-      return parts.join("_") + ".pdf";
-
-    }
-
-
-    // --------------------------------------------------
-    // DISPLAY RESULT
-    // --------------------------------------------------
-
-    function displayResult(
-      file,
-      text,
-      usedOCR
-    ) {
-
-      const type =
-        detectDocumentType(text);
-
-
-      const name =
-        extractName(text);
-
-
-      const profession =
-        extractProfession(text);
-
-
-      const location =
-        extractLocation(text);
-
-
-      const email =
-        extractEmail(text);
-
-
-      const phone =
-        extractPhone(text);
-
-
-      const suggestedFilename =
-        generateFilename(
-          type,
-          name,
-          profession,
-          location
-        );
-
-
-      const resultCard =
-        document.createElement("div");
-
-      resultCard.className =
-        "result-card";
-
-
-      const success =
-        document.createElement("div");
-
-      success.className =
-        "success";
-
-      success.textContent =
-        "✓ Document successfully analyzed";
-
-      resultCard.appendChild(success);
-
-
-      // METHOD
-
-      const method =
-        document.createElement("div");
-
-      method.className =
-        "small";
-
-      method.textContent =
-        "Analysis method: " +
-        (usedOCR ? "OCR" : "PDF text");
-
-      resultCard.appendChild(method);
-
-
-      resultCard.appendChild(
-        createEditableField(
-          "Document type",
-          type
-        )
-      );
-
-
-      resultCard.appendChild(
-        createEditableField(
-          "Name",
-          name
-        )
-      );
-
-
-      resultCard.appendChild(
-        createEditableField(
-          "Profession",
-          profession
-        )
-      );
-
-
-      resultCard.appendChild(
-        createEditableField(
-          "Location",
-          location
-        )
-      );
-
-
-      resultCard.appendChild(
-        createEditableField(
-          "Email",
-          email
-        )
-      );
-
-
-      resultCard.appendChild(
-        createEditableField(
-          "Phone",
-          phone
-        )
-      );
-
-
-      // FILENAME SECTION
-
-      const filenameField =
-        document.createElement("div");
-
-      filenameField.className =
-        "field";
-
-
-      const filenameLabel =
-        document.createElement("label");
-
-      filenameLabel.textContent =
-        "Suggested filename";
-
-      filenameField.appendChild(
-        filenameLabel
-      );
-
-
-      const filenameInput =
-        document.createElement("input");
-
-      filenameInput.type =
-        "text";
-
-      filenameInput.value =
-        suggestedFilename;
-
-      filenameInput.id =
-        "filenameInput";
-
-      filenameField.appendChild(
-        filenameInput
-      );
-
-
-      resultCard.appendChild(
-        filenameField
-      );
-
-
-      // DOWNLOAD BUTTON
-
-      const downloadButton =
-        document.createElement("button");
-
-      downloadButton.className =
-        "primary-btn";
-
-      downloadButton.textContent =
-        "Download organized PDF";
-
-
-      downloadButton.addEventListener(
-        "click",
-        () => {
-
-          downloadOrganizedFile(
-            filenameInput.value
-          );
-
-        }
-      );
-
-
-      resultCard.appendChild(
-        downloadButton
-      );
-
-
-      // COPY BUTTON
-
-      const copyButton =
-        document.createElement("button");
-
-      copyButton.className =
-        "secondary-btn";
-
-      copyButton.textContent =
-        "Copy filename";
-
-
-      copyButton.addEventListener(
-        "click",
-        async () => {
-
-          try {
-
-            await navigator.clipboard.writeText(
-              filenameInput.value
-            );
+        setTimeout(
+          function() {
 
             copyButton.textContent =
-              "Copied!";
+              "Copy filename";
 
-            setTimeout(() => {
-
-              copyButton.textContent =
-                "Copy filename";
-
-            }, 1500);
-
-          } catch {
-
-            alert(
-              "Could not copy automatically. Please select the filename and copy it manually."
-            );
-
-          }
-
-        }
-      );
-
-
-      resultCard.appendChild(
-        copyButton
-      );
-
-
-      // RAW TEXT
-
-      const rawSection =
-        document.createElement("div");
-
-      rawSection.className =
-        "raw-text";
-
-
-      const rawLabel =
-        document.createElement("div");
-
-      rawLabel.className =
-        "small";
-
-      rawLabel.textContent =
-        `Extracted text (${text.length} characters)`;
-
-      rawSection.appendChild(
-        rawLabel
-      );
-
-
-      const rawTextarea =
-        document.createElement("textarea");
-
-      rawTextarea.readOnly =
-        true;
-
-      rawTextarea.value =
-        text;
-
-      rawSection.appendChild(
-        rawTextarea
-      );
-
-
-      resultCard.appendChild(
-        rawSection
-      );
-
-
-      const rawButton =
-        document.createElement("button");
-
-      rawButton.className =
-        "secondary-btn";
-
-      rawButton.textContent =
-        "Show extracted text";
-
-
-      rawButton.addEventListener(
-        "click",
-        () => {
-
-          if (
-            rawSection.style.display ===
-            "block"
-          ) {
-
-            rawSection.style.display =
-              "none";
-
-            rawButton.textContent =
-              "Show extracted text";
-
-          } else {
-
-            rawSection.style.display =
-              "block";
-
-            rawButton.textContent =
-              "Hide extracted text";
-
-          }
-
-        }
-      );
-
-
-      resultCard.appendChild(
-        rawButton
-      );
-
-
-      results.appendChild(
-        resultCard
-      );
-
-    }
-
-
-    // --------------------------------------------------
-    // EDITABLE FIELD
-    // --------------------------------------------------
-
-    function createEditableField(
-      labelText,
-      value
-    ) {
-
-      const field =
-        document.createElement("div");
-
-      field.className =
-        "field";
-
-
-      const label =
-        document.createElement("label");
-
-      label.textContent =
-        labelText;
-
-
-      const input =
-        document.createElement("input");
-
-      input.type =
-        "text";
-
-      input.value =
-        value || "";
-
-
-      field.appendChild(label);
-
-      field.appendChild(input);
-
-
-      return field;
-
-    }
-
-
-    // --------------------------------------------------
-    // DOWNLOAD
-    // --------------------------------------------------
-
-    function downloadOrganizedFile(
-      filename
-    ) {
-
-      if (!currentFile) {
-
-        showError(
-          "There is no PDF available to download."
+          },
+          1500
         );
 
-        return;
       }
 
-
-      let cleanFilename =
-        filename.trim();
-
-
-      if (!cleanFilename) {
-
-        cleanFilename =
-          "Organized-Document.pdf";
-      }
+    }
+  );
 
 
-      if (
-        !cleanFilename
-          .toLowerCase()
-          .endsWith(".pdf")
-      ) {
+  updateFilename();
 
-        cleanFilename += ".pdf";
-      }
+}
 
 
-      cleanFilename =
-        cleanFilename
-          .replace(/[<>:"/\\|?*]+/g, "")
-          .trim();
+/* ---------------------------------------------------------
+   ANALYZE PDF
+   --------------------------------------------------------- */
+
+async function analyzePdf(file) {
+
+  resultsBox.innerHTML = "";
+
+  clearStatus();
 
 
-      const url =
-        URL.createObjectURL(
-          currentFile
-        );
+  if (!file) {
+    return;
+  }
 
 
-      const link =
-        document.createElement("a");
+  if (
+    file.type !== "application/pdf" &&
+    !file.name.toLowerCase().endsWith(".pdf")
+  ) {
+
+    showStatus(
+      "Please choose a PDF file.",
+      "error"
+    );
+
+    return;
+
+  }
 
 
-      link.href =
-        url;
+  showStatus(
+    "Reading PDF...",
+    "info"
+  );
 
-      link.download =
-        cleanFilename;
+
+  try {
+
+    /*
+      First attempt:
+      read normal PDF text.
+    */
+
+    let text =
+      await extractPdfText(file);
 
 
-      document.body.appendChild(
-        link
+    /*
+      If enough text exists,
+      this is a normal PDF.
+    */
+
+    if (
+      text &&
+      text.replace(/\s/g, "").length >= 30
+    ) {
+
+      displayResult(
+        file,
+        text,
+        false
       );
 
+      showStatus(
+        "Analysis complete.",
+        "success"
+      );
 
-      link.click();
-
-
-      link.remove();
-
-
-      setTimeout(() => {
-
-        URL.revokeObjectURL(url);
-
-      }, 1000);
+      return;
 
     }
 
 
-    // --------------------------------------------------
-    // STATUS
-    // --------------------------------------------------
+    /*
+      If there is little/no text,
+      it is probably a scanned PDF.
+      Use OCR.
+    */
 
-    function showStatus(message) {
+    showStatus(
+      "No usable PDF text found. Switching to OCR...",
+      "info"
+    );
 
-      statusBox.style.display =
-        "block";
 
-      statusBox.textContent =
-        message;
+    text =
+      await ocrPdf(file);
+
+
+    if (
+      !text ||
+      text.replace(/\s/g, "").length < 5
+    ) {
+
+      throw new Error(
+        "OCR could not find readable text in this PDF."
+      );
+
+    }
+
+
+    displayResult(
+      file,
+      text,
+      true
+    );
+
+
+    showStatus(
+      "Analysis complete.",
+      "success"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "SmartDoc error:",
+      error
+    );
+
+
+    showStatus(
+      "Something went wrong while analyzing the PDF. " +
+      "Please try again.",
+      "error"
+    );
+
+  }
+
+}
+
+
+/* ---------------------------------------------------------
+   FILE INPUT
+   --------------------------------------------------------- */
+
+fileInput.addEventListener(
+  "change",
+  function(event) {
+
+    const file =
+      event.target.files &&
+      event.target.files[0];
+
+    if (file) {
+      analyzePdf(file);
+    }
+
+  }
+);
+
+
+/* ---------------------------------------------------------
+   DRAG & DROP
+   --------------------------------------------------------- */
+
+uploadBox.addEventListener(
+  "dragover",
+  function(event) {
+
+    event.preventDefault();
+
+    uploadBox.classList.add(
+      "dragover"
+    );
+
+  }
+);
+
+
+uploadBox.addEventListener(
+  "dragleave",
+  function() {
+
+    uploadBox.classList.remove(
+      "dragover"
+    );
+
+  }
+);
+
+
+uploadBox.addEventListener(
+  "drop",
+  function(event) {
+
+    event.preventDefault();
+
+    uploadBox.classList.remove(
+      "dragover"
+    );
+
+
+    const file =
+      event.dataTransfer.files &&
+      event.dataTransfer.files[0];
+
+
+    if (file) {
+      analyzePdf(file);
+    }
+
+  }
+);
+
+
+/* ---------------------------------------------------------
+   STARTUP CHECK
+   --------------------------------------------------------- */
+
+window.addEventListener(
+  "load",
+  function() {
+
+    if (!window.pdfjsLib) {
+
+      showStatus(
+        "PDF reader failed to load. Please refresh the page.",
+        "error"
+      );
+
+      return;
 
     }
 
 
-    function showError(message) {
+    if (!window.Tesseract) {
 
-      errorBox.style.display =
-        "block";
-
-      errorBox.textContent =
-        message;
-
-    }
-
-
-    function hideError() {
-
-      errorBox.style.display =
-        "none";
-
-      errorBox.textContent =
-        "";
+      showStatus(
+        "OCR library failed to load. Normal PDFs can still be read.",
+        "error"
+      );
 
     }
 
-  </script>
+  }
+);
+
+</script>
 
 </body>
 </html>
