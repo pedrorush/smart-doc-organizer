@@ -19,13 +19,13 @@
 
     .container {
       max-width: 1000px;
-      margin: 0 auto;
+      margin: auto;
       padding: 40px 20px;
     }
 
     h1 {
-      margin-bottom: 8px;
       font-size: 36px;
+      margin-bottom: 8px;
     }
 
     .subtitle {
@@ -39,18 +39,16 @@
       border-radius: 16px;
       padding: 45px 20px;
       text-align: center;
-      cursor: pointer;
       transition: 0.2s;
     }
 
-    .upload-box:hover,
     .upload-box.dragover {
       border-color: #2563eb;
       background: #eff6ff;
     }
 
     .upload-box h2 {
-      margin: 0 0 10px;
+      margin-bottom: 10px;
     }
 
     .upload-box p {
@@ -110,12 +108,11 @@
 
     .category h2 {
       margin-top: 0;
-      font-size: 20px;
     }
 
     .file {
       border-top: 1px solid #e5e7eb;
-      padding: 14px 0;
+      padding: 16px 0;
     }
 
     .original {
@@ -123,11 +120,27 @@
       word-break: break-word;
     }
 
+    .analysis {
+      margin-top: 8px;
+      color: #374151;
+      font-size: 14px;
+    }
+
     .suggestion {
-      margin-top: 6px;
+      margin-top: 8px;
       color: #2563eb;
       font-size: 14px;
+      font-weight: bold;
       word-break: break-word;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      color: #6b7280;
+      display: none;
     }
 
     .empty {
@@ -140,82 +153,98 @@
 
 <body>
 
-  <div class="container">
+<div class="container">
 
-    <h1>SmartDoc Organizer</h1>
+  <h1>SmartDoc Organizer</h1>
 
-    <p class="subtitle">
-      Upload your documents and automatically organize them.
-    </p>
+  <p class="subtitle">
+    Upload documents and automatically understand and organize them.
+  </p>
 
-    <div class="upload-box" id="uploadBox">
+  <div class="upload-box" id="uploadBox">
 
-      <h2>Drop your files here</h2>
+    <h2>Drop your documents here</h2>
 
-      <p>or choose files from your computer</p>
+    <p>PDF files can now be analyzed by their contents.</p>
 
-      <label class="button" for="fileInput">
-        Choose Files
-      </label>
+    <label class="button" for="fileInput">
+      Choose Files
+    </label>
 
-      <input
-        type="file"
-        id="fileInput"
-        multiple
-      >
+    <input
+      type="file"
+      id="fileInput"
+      multiple
+      accept=".pdf,.txt"
+    >
 
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="stats">
+
+    <div class="stat">
+      <div class="stat-number" id="totalFiles">0</div>
+      <div class="stat-label">Files</div>
     </div>
 
-    <div class="stats">
-
-      <div class="stat">
-        <div class="stat-number" id="totalFiles">0</div>
-        <div class="stat-label">Files</div>
-      </div>
-
-      <div class="stat">
-        <div class="stat-number" id="financeCount">0</div>
-        <div class="stat-label">Finance</div>
-      </div>
-
-      <div class="stat">
-        <div class="stat-number" id="hrCount">0</div>
-        <div class="stat-label">HR</div>
-      </div>
-
-      <div class="stat">
-        <div class="stat-number" id="legalCount">0</div>
-        <div class="stat-label">Legal</div>
-      </div>
-
-      <div class="stat">
-        <div class="stat-number" id="otherCount">0</div>
-        <div class="stat-label">Other</div>
-      </div>
-
+    <div class="stat">
+      <div class="stat-number" id="financeCount">0</div>
+      <div class="stat-label">Finance</div>
     </div>
 
-    <div id="results" class="results">
+    <div class="stat">
+      <div class="stat-number" id="hrCount">0</div>
+      <div class="stat-label">HR</div>
+    </div>
 
-      <div class="empty">
-        No documents uploaded yet.
-      </div>
+    <div class="stat">
+      <div class="stat-number" id="legalCount">0</div>
+      <div class="stat-label">Legal</div>
+    </div>
 
+    <div class="stat">
+      <div class="stat-number" id="otherCount">0</div>
+      <div class="stat-label">Other</div>
     </div>
 
   </div>
 
-<script>
+  <div id="results" class="results">
+
+    <div class="empty">
+      No documents uploaded yet.
+    </div>
+
+  </div>
+
+</div>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.105/pdf.min.mjs"
+        type="module"></script>
+
+<script type="module">
+
+import * as pdfjsLib from
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.105/pdf.min.mjs";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.105/pdf.worker.min.mjs";
+
 
 const uploadBox = document.getElementById("uploadBox");
 const fileInput = document.getElementById("fileInput");
 const results = document.getElementById("results");
+const status = document.getElementById("status");
 
 const totalFiles = document.getElementById("totalFiles");
 const financeCount = document.getElementById("financeCount");
 const hrCount = document.getElementById("hrCount");
 const legalCount = document.getElementById("legalCount");
 const otherCount = document.getElementById("otherCount");
+
 
 const categories = [
   "Finance",
@@ -226,127 +255,289 @@ const categories = [
   "Other"
 ];
 
+
 fileInput.addEventListener("change", function() {
-  organizeFiles(fileInput.files);
+
+  analyzeFiles(fileInput.files);
+
 });
+
 
 uploadBox.addEventListener("dragover", function(event) {
+
   event.preventDefault();
+
   uploadBox.classList.add("dragover");
+
 });
+
 
 uploadBox.addEventListener("dragleave", function() {
+
   uploadBox.classList.remove("dragover");
+
 });
 
+
 uploadBox.addEventListener("drop", function(event) {
+
   event.preventDefault();
 
   uploadBox.classList.remove("dragover");
 
-  organizeFiles(event.dataTransfer.files);
+  analyzeFiles(event.dataTransfer.files);
+
 });
 
-function getCategory(filename) {
 
-  const name = filename.toLowerCase();
+async function analyzeFiles(files) {
 
-  if (
-    name.includes("invoice") ||
-    name.includes("receipt") ||
-    name.includes("payment") ||
-    name.includes("salary") ||
-    name.includes("budget") ||
-    name.includes("tax")
-  ) {
-    return "Finance";
-  }
+  results.innerHTML = "";
 
-  if (
-    name.includes("cv") ||
-    name.includes("resume") ||
-    name.includes("employee") ||
-    name.includes("hr") ||
-    name.includes("contractor") ||
-    name.includes("payroll")
-  ) {
-    return "Human Resources";
-  }
-
-  if (
-    name.includes("contract") ||
-    name.includes("agreement") ||
-    name.includes("legal") ||
-    name.includes("nda") ||
-    name.includes("terms")
-  ) {
-    return "Legal";
-  }
-
-  if (
-    name.includes("marketing") ||
-    name.includes("campaign") ||
-    name.includes("advert") ||
-    name.includes("social")
-  ) {
-    return "Marketing";
-  }
-
-  if (
-    name.includes("project") ||
-    name.includes("report") ||
-    name.includes("meeting") ||
-    name.includes("operations")
-  ) {
-    return "Operations";
-  }
-
-  return "Other";
-}
-
-function cleanFilename(filename) {
-
-  const extension = filename.includes(".")
-    ? filename.substring(filename.lastIndexOf("."))
-    : "";
-
-  let name = filename.replace(extension, "");
-
-  name = name
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  name = name
-    .split(" ")
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join("_");
-
-  return name + extension.toLowerCase();
-}
-
-function organizeFiles(files) {
+  showStatus("Reading your documents...");
 
   const grouped = {};
 
   categories.forEach(category => {
+
     grouped[category] = [];
+
   });
 
-  Array.from(files).forEach(file => {
 
-    const category = getCategory(file.name);
+  let count = 0;
+
+
+  for (const file of Array.from(files)) {
+
+    count++;
+
+    showStatus(
+      `Analyzing document ${count} of ${files.length}: ${file.name}`
+    );
+
+
+    let text = "";
+
+
+    try {
+
+      if (file.type === "application/pdf") {
+
+        text = await extractPdfText(file);
+
+      } else if (file.type === "text/plain") {
+
+        text = await file.text();
+
+      }
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+
+    const category = getCategory(file.name, text);
+
+    const suggested = createSuggestedName(
+      file.name,
+      category,
+      text
+    );
+
 
     grouped[category].push({
+
       original: file.name,
-      suggested: cleanFilename(file.name)
+
+      suggested: suggested,
+
+      textFound: text.length > 0
+
     });
 
-  });
+  }
+
 
   displayResults(grouped);
 
+  showStatus(
+    `Finished analyzing ${files.length} document(s).`
+  );
+
 }
+
+
+async function extractPdfText(file) {
+
+  const arrayBuffer = await file.arrayBuffer();
+
+  const pdf = await pdfjsLib.getDocument({
+    data: arrayBuffer
+  }).promise;
+
+
+  let fullText = "";
+
+
+  const maxPages = Math.min(pdf.numPages, 10);
+
+
+  for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+
+    const page = await pdf.getPage(pageNumber);
+
+    const content = await page.getTextContent();
+
+
+    const pageText = content.items
+      .map(item => item.str)
+      .join(" ");
+
+
+    fullText += pageText + "\n";
+
+  }
+
+
+  return fullText;
+
+}
+
+
+function getCategory(filename, text) {
+
+  const combined =
+    (filename + " " + text).toLowerCase();
+
+
+  if (
+    combined.includes("invoice") ||
+    combined.includes("receipt") ||
+    combined.includes("payment") ||
+    combined.includes("salary") ||
+    combined.includes("budget") ||
+    combined.includes("tax") ||
+    combined.includes("amount due")
+  ) {
+
+    return "Finance";
+
+  }
+
+
+  if (
+    combined.includes("cv") ||
+    combined.includes("resume") ||
+    combined.includes("employee") ||
+    combined.includes("human resources") ||
+    combined.includes("payroll") ||
+    combined.includes("job application")
+  ) {
+
+    return "Human Resources";
+
+  }
+
+
+  if (
+    combined.includes("contract") ||
+    combined.includes("agreement") ||
+    combined.includes("legal") ||
+    combined.includes("nda") ||
+    combined.includes("terms and conditions")
+  ) {
+
+    return "Legal";
+
+  }
+
+
+  if (
+    combined.includes("marketing") ||
+    combined.includes("campaign") ||
+    combined.includes("advertising") ||
+    combined.includes("social media")
+  ) {
+
+    return "Marketing";
+
+  }
+
+
+  if (
+    combined.includes("project") ||
+    combined.includes("meeting") ||
+    combined.includes("operations") ||
+    combined.includes("internal report")
+  ) {
+
+    return "Operations";
+
+  }
+
+
+  return "Other";
+
+}
+
+
+function createSuggestedName(filename, category, text) {
+
+  const extension =
+    filename.includes(".")
+      ? filename.substring(filename.lastIndexOf("."))
+      : "";
+
+
+  let baseName = "";
+
+
+  if (category === "Finance") {
+
+    baseName = "Finance_Document";
+
+  } else if (category === "Human Resources") {
+
+    baseName = "HR_Document";
+
+  } else if (category === "Legal") {
+
+    baseName = "Legal_Document";
+
+  } else if (category === "Marketing") {
+
+    baseName = "Marketing_Document";
+
+  } else if (category === "Operations") {
+
+    baseName = "Operations_Document";
+
+  } else {
+
+    baseName = "Organized_Document";
+
+  }
+
+
+  const dateMatch = text.match(
+    /\b(20\d{2}[-/]\d{1,2}[-/]\d{1,2})\b/
+  );
+
+
+  if (dateMatch) {
+
+    baseName += "_" + dateMatch[1].replaceAll("/", "-");
+
+  }
+
+
+  return baseName + extension.toLowerCase();
+
+}
+
 
 function displayResults(grouped) {
 
@@ -354,55 +545,80 @@ function displayResults(grouped) {
 
   let total = 0;
 
+
   categories.forEach(category => {
 
     const files = grouped[category];
 
     total += files.length;
 
+
     if (files.length === 0) {
       return;
     }
 
-    const categoryBox = document.createElement("div");
+
+    const categoryBox =
+      document.createElement("div");
 
     categoryBox.className = "category";
 
-    categoryBox.innerHTML = `
-      <h2>${category} (${files.length})</h2>
-    `;
+
+    categoryBox.innerHTML =
+      `<h2>${category} (${files.length})</h2>`;
+
 
     files.forEach(file => {
 
-      const fileBox = document.createElement("div");
+      const fileBox =
+        document.createElement("div");
 
       fileBox.className = "file";
 
+
+      const contentStatus =
+        file.textFound
+          ? "✓ Document text analyzed"
+          : "Filename analyzed";
+
+
       fileBox.innerHTML = `
+
         <div class="original">
           ${escapeHtml(file.original)}
+        </div>
+
+        <div class="analysis">
+          ${contentStatus}
         </div>
 
         <div class="suggestion">
           Suggested name: ${escapeHtml(file.suggested)}
         </div>
+
       `;
+
 
       categoryBox.appendChild(fileBox);
 
     });
 
+
     results.appendChild(categoryBox);
 
   });
 
+
   totalFiles.textContent = total;
 
-  financeCount.textContent = grouped["Finance"].length;
+  financeCount.textContent =
+    grouped["Finance"].length;
 
-  hrCount.textContent = grouped["Human Resources"].length;
+  hrCount.textContent =
+    grouped["Human Resources"].length;
 
-  legalCount.textContent = grouped["Legal"].length;
+  legalCount.textContent =
+    grouped["Legal"].length;
 
   otherCount.textContent =
     grouped["Other"].length +
@@ -410,6 +626,16 @@ function displayResults(grouped) {
     grouped["Operations"].length;
 
 }
+
+
+function showStatus(message) {
+
+  status.style.display = "block";
+
+  status.textContent = message;
+
+}
+
 
 function escapeHtml(text) {
 
