@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDoc Organizer</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+
+    header {
+      background: white;
+      padding: 20px 40px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 20px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .hero h2 {
+      font-size: 42px;
+      margin-bottom: 15px;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: #6b7280;
+    }
+
+    .upload-box {
+      background: white;
+      border: 2px dashed #cbd5e1;
+      border-radius: 16px;
+      padding: 60px 30px;
+      text-align: center;
+    }
+
+    .upload-box p {
+      color: #6b7280;
+    }
+
+    input[type="file"] {
+      margin-top: 20px;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      background: #111827;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    #results {
+      margin-top: 30px;
+    }
+
+    .file {
+      background: white;
+      padding: 15px 20px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>📁 SmartDoc Organizer</h1>
+</header>
+
+<main>
+
+  <section class="hero">
+    <h2>Organize your documents automatically.</h2>
+    <p>
+      Upload your messy files and SmartDoc will help you organize them.
+    </p>
+  </section>
+
+  <section class="upload-box">
+
+    <h3>Upload your documents</h3>
+
+    <p>
+      Select one or more files from your computer.
+    </p>
+
+    <input
+      type="file"
+      id="fileInput"
+      multiple
+    >
+
+    <br>
+
+    <button onclick="showFiles()">
+      Organize Documents
+    </button>
+
+  </section>
+
+  <section id="results"></section>
+
+</main>
+
+<script>
+
+function showFiles() {
+
+  const input = document.getElementById("fileInput");
+  const results = document.getElementById("results");
+
+  results.innerHTML = "";
+
+  if (input.files.length === 0) {
+    results.innerHTML = "<p>Please select some documents first.</p>";
+    return;
+  }
+
+  const title = document.createElement("h3");
+  title.textContent = "Your documents";
+  results.appendChild(title);
+
+  for (const file of input.files) {
+
+    const item = document.createElement("div");
+
+    item.className = "file";
+
+    item.textContent =
+      "📄 " + file.name +
+      " — Ready to organize";
+
+    results.appendChild(item);
+  }
+}
+
+</script>
+
+</body>
+</html>
