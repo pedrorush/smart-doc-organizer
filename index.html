@@ -38,10 +38,6 @@
       margin-bottom: 20px;
     }
 
-    input[type="file"] {
-      margin-top: 15px;
-    }
-
     .status {
       margin-top: 20px;
       padding: 15px;
@@ -57,23 +53,59 @@
       border: 1px solid #ddd;
     }
 
-    .success {
-      color: #16803c;
-      font-weight: bold;
+    .field {
+      margin-bottom: 15px;
     }
 
-    label {
+    .field label {
       display: block;
-      margin-top: 12px;
+      font-weight: bold;
+      margin-bottom: 6px;
     }
 
-    input,
-    select {
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+      background: white;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      outline: none;
+      border-color: #555;
+    }
+
+    .filename-box {
+      background: #f1f3f5;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+
+    .filename {
+      margin-top: 8px;
+      font-family: monospace;
       font-size: 15px;
+      word-break: break-word;
     }
 
     button {
+      padding: 11px 16px;
+      margin-top: 12px;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
       font-size: 14px;
+    }
+
+    .success {
+      color: #16803c;
+      font-weight: bold;
     }
 
     pre {
@@ -97,7 +129,7 @@
 
     <strong>Upload your PDF</strong>
 
-    <br>
+    <br><br>
 
     <input
       type="file"
@@ -116,831 +148,666 @@
 </div>
 
 
-<!-- Tesseract OCR -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 
 <script type="module">
 
-  /*
-   * PDF.js
-   */
+import * as pdfjsLib from
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs";
 
-  import * as pdfjsLib from
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs";
-
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs";
 
 
-  /*
-   * Basic UI elements
-   */
+const fileInput =
+document.getElementById("fileInput");
 
-  const fileInput = document.getElementById("fileInput");
-  const statusBox = document.getElementById("status");
-  const resultsBox = document.getElementById("results");
+const statusBox =
+document.getElementById("status");
 
-
-  /*
-   * Status message
-   */
-
-  function showStatus(message) {
-    statusBox.textContent = message;
-  }
+const resultsBox =
+document.getElementById("results");
 
 
-  /*
-   * Prevent HTML from being inserted accidentally
-   */
-
-  function escapeHTML(value) {
-
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-
-  }
+function showStatus(message) {
+  statusBox.textContent = message;
+}
 
 
-  /*
-   * Load PDF
-   */
+function escapeHTML(value) {
 
-  async function loadPDF(file) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
-    const arrayBuffer = await file.arrayBuffer();
-
-    const pdf = await pdfjsLib.getDocument({
-      data: arrayBuffer
-    }).promise;
-
-    return pdf;
-
-  }
+}
 
 
-  /*
-   * Extract selectable text from PDF
-   */
+async function loadPDF(file) {
 
-  async function extractPDFText(pdf) {
+  const arrayBuffer =
+    await file.arrayBuffer();
 
-    let fullText = "";
+  return await pdfjsLib.getDocument({
+    data: arrayBuffer
+  }).promise;
 
-    const pagesToRead = Math.min(pdf.numPages, 10);
+}
 
-    for (let pageNumber = 1; pageNumber <= pagesToRead; pageNumber++) {
 
-      const page = await pdf.getPage(pageNumber);
+async function extractPDFText(pdf) {
 
-      const content = await page.getTextContent();
+  let fullText = "";
 
-      const pageText = content.items
+  const pagesToRead =
+    Math.min(pdf.numPages, 10);
+
+  for (
+    let pageNumber = 1;
+    pageNumber <= pagesToRead;
+    pageNumber++
+  ) {
+
+    const page =
+      await pdf.getPage(pageNumber);
+
+    const content =
+      await page.getTextContent();
+
+    const pageText =
+      content.items
         .map(item => item.str)
         .join(" ");
 
-      fullText += "\n" + pageText;
-
-    }
-
-    return fullText;
-
+    fullText += "\n" + pageText;
   }
 
+  return fullText;
+}
 
-  /*
-   * Render PDF page as an image
-   */
 
-  async function renderPage(pdf, pageNumber, scale = 2.5) {
+async function renderPage(
+  pdf,
+  pageNumber,
+  scale = 2.5
+) {
 
-    const page = await pdf.getPage(pageNumber);
+  const page =
+    await pdf.getPage(pageNumber);
 
-    const viewport = page.getViewport({
+  const viewport =
+    page.getViewport({
       scale
     });
 
-    const canvas = document.createElement("canvas");
+  const canvas =
+    document.createElement("canvas");
 
-    const context = canvas.getContext("2d");
+  const context =
+    canvas.getContext("2d");
 
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+  canvas.width =
+    viewport.width;
 
-    await page.render({
-      canvasContext: context,
-      viewport
-    }).promise;
+  canvas.height =
+    viewport.height;
 
-    return canvas;
+  await page.render({
+    canvasContext: context,
+    viewport
+  }).promise;
 
-  }
+  return canvas;
+}
 
 
-  /*
-   * OCR scanned/image PDFs
-   */
+async function runOCR(pdf) {
 
-  async function runOCR(pdf) {
+  let ocrText = "";
 
-    let ocrText = "";
+  const pagesToOCR =
+    Math.min(pdf.numPages, 3);
 
-    const pagesToOCR = Math.min(pdf.numPages, 3);
+  for (
+    let pageNumber = 1;
+    pageNumber <= pagesToOCR;
+    pageNumber++
+  ) {
 
-    for (
-      let pageNumber = 1;
-      pageNumber <= pagesToOCR;
-      pageNumber++
-    ) {
+    showStatus(
+      `Reading page ${pageNumber} of ${pagesToOCR} with OCR...`
+    );
 
-      showStatus(
-        `Reading page ${pageNumber} of ${pagesToOCR} with OCR...`
-      );
-
-      const canvas = await renderPage(
+    const canvas =
+      await renderPage(
         pdf,
         pageNumber,
         2.5
       );
 
-      const result = await Tesseract.recognize(
+    const result =
+      await Tesseract.recognize(
         canvas,
         "eng+fra",
         {
           logger: message => {
 
-            if (message.status === "recognizing text") {
+            if (
+              message.status ===
+              "recognizing text"
+            ) {
 
               const progress =
-                Math.round(message.progress * 100);
+                Math.round(
+                  message.progress * 100
+                );
 
               showStatus(
                 `OCR reading page ${pageNumber}... ${progress}%`
               );
-
             }
 
           }
         }
       );
 
-      ocrText += "\n" + result.data.text;
-
-    }
-
-    return ocrText;
-
+    ocrText +=
+      "\n" + result.data.text;
   }
 
+  return ocrText;
+}
 
-  /*
-   * Clean text
-   */
 
-  function cleanText(text) {
+function cleanText(text) {
 
-    return text
-      .replace(/\r/g, "\n")
-      .replace(/[ \t]+/g, " ")
-      .replace(/\n+/g, "\n")
-      .trim();
+  return text
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n+/g, "\n")
+    .trim();
 
+}
+
+
+function detectDocumentType(text) {
+
+  const lower =
+    text.toLowerCase();
+
+  if (
+    lower.includes("invoice") ||
+    lower.includes("facture") ||
+    lower.includes("amount due") ||
+    lower.includes("total ttc")
+  ) {
+    return "Invoice";
   }
 
-
-  /*
-   * Detect document type
-   */
-
-  function detectDocumentType(text) {
-
-    const lower = text.toLowerCase();
-
-    if (
-      lower.includes("invoice") ||
-      lower.includes("facture") ||
-      lower.includes("amount due") ||
-      lower.includes("total ttc")
-    ) {
-      return "Invoice";
-    }
-
-    if (
-      lower.includes("receipt") ||
-      lower.includes("reçu") ||
-      lower.includes("recu")
-    ) {
-      return "Receipt";
-    }
-
-    if (
-      lower.includes("contract") ||
-      lower.includes("contrat") ||
-      lower.includes("agreement")
-    ) {
-      return "Contract";
-    }
-
-    if (
-      lower.includes("curriculum vitae") ||
-      lower.includes("resume") ||
-      lower.includes("cv") ||
-      lower.includes("expériences professionnelles") ||
-      lower.includes("experiences professionnelles") ||
-      lower.includes("education") ||
-      lower.includes("formation")
-    ) {
-      return "Resume / CV";
-    }
-
-    if (
-      lower.includes("marketing") ||
-      lower.includes("campaign") ||
-      lower.includes("campagne")
-    ) {
-      return "Marketing";
-    }
-
-    if (
-      lower.includes("operations") ||
-      lower.includes("opérations") ||
-      lower.includes("procedure")
-    ) {
-      return "Operations";
-    }
-
-    return "Document";
-
+  if (
+    lower.includes("receipt") ||
+    lower.includes("reçu") ||
+    lower.includes("recu")
+  ) {
+    return "Receipt";
   }
 
+  if (
+    lower.includes("contract") ||
+    lower.includes("contrat") ||
+    lower.includes("agreement")
+  ) {
+    return "Contract";
+  }
 
-  /*
-   * Extract email
-   */
+  if (
+    lower.includes("curriculum vitae") ||
+    lower.includes("resume") ||
+    lower.includes("cv") ||
+    lower.includes("expériences professionnelles") ||
+    lower.includes("experiences professionnelles") ||
+    lower.includes("education") ||
+    lower.includes("formation")
+  ) {
+    return "Resume / CV";
+  }
 
-  function extractEmail(text) {
+  if (
+    lower.includes("marketing") ||
+    lower.includes("campaign") ||
+    lower.includes("campagne")
+  ) {
+    return "Marketing";
+  }
 
-    const match = text.match(
+  if (
+    lower.includes("operations") ||
+    lower.includes("opérations") ||
+    lower.includes("procedure")
+  ) {
+    return "Operations";
+  }
+
+  return "Document";
+}
+
+
+function extractEmail(text) {
+
+  const match =
+    text.match(
       /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
     );
 
-    return match
-      ? match[0]
-      : "Not detected";
+  return match
+    ? match[0]
+    : "Not detected";
+}
 
-  }
 
+function extractPhone(text) {
 
-  /*
-   * Extract phone number
-   */
-
-  function extractPhone(text) {
-
-    const matches = text.match(
+  const matches =
+    text.match(
       /(?:\+?\d[\d .()-]{7,}\d)/g
     );
 
-    if (!matches) {
-      return "Not detected";
-    }
-
-    return matches[0]
-      .replace(/\s+/g, " ")
-      .trim();
-
-  }
-
-
-  /*
-   * Extract location
-   */
-
-  function extractLocation(text) {
-
-    const locations = [
-      "Marrakech",
-      "Marrakesh",
-      "Casablanca",
-      "Rabat",
-      "Agadir",
-      "Tangier",
-      "Tanger",
-      "Fes",
-      "Fez",
-      "Meknes",
-      "Morocco",
-      "Maroc",
-      "Paris",
-      "London",
-      "Madrid",
-      "Barcelona"
-    ];
-
-    for (const location of locations) {
-
-      if (
-        text.toLowerCase()
-          .includes(location.toLowerCase())
-      ) {
-        return location;
-      }
-
-    }
-
+  if (!matches) {
     return "Not detected";
+  }
+
+  return matches[0]
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+
+function extractLocation(text) {
+
+  const locations = [
+    "Marrakech",
+    "Marrakesh",
+    "Casablanca",
+    "Rabat",
+    "Agadir",
+    "Tangier",
+    "Tanger",
+    "Fes",
+    "Fez",
+    "Meknes",
+    "Morocco",
+    "Maroc",
+    "Paris",
+    "London",
+    "Madrid",
+    "Barcelona"
+  ];
+
+  for (const location of locations) {
+
+    if (
+      text.toLowerCase()
+        .includes(location.toLowerCase())
+    ) {
+      return location;
+    }
 
   }
 
-
-  /*
-   * Extract profession
-   */
-
-  function extractProfession(text) {
-
-    const professions = [
-
-      {
-        keywords: [
-          "barman",
-          "mixologist"
-        ],
-        name: "Barman / Mixologist"
-      },
-
-      {
-        keywords: [
-          "developer",
-          "software engineer",
-          "web developer"
-        ],
-        name: "Developer"
-      },
-
-      {
-        keywords: [
-          "accountant",
-          "comptable"
-        ],
-        name: "Accountant"
-      },
-
-      {
-        keywords: [
-          "manager",
-          "responsable"
-        ],
-        name: "Manager"
-      },
-
-      {
-        keywords: [
-          "designer",
-          "graphic designer"
-        ],
-        name: "Designer"
-      },
-
-      {
-        keywords: [
-          "chef",
-          "cook",
-          "cuisinier"
-        ],
-        name: "Chef / Cook"
-      }
-
-    ];
+  return "Not detected";
+}
 
 
-    const lower = text.toLowerCase();
+function extractProfession(text) {
 
-    for (const profession of professions) {
+  const lower =
+    text.toLowerCase();
 
-      for (const keyword of profession.keywords) {
+  const professions = [
 
-        if (lower.includes(keyword)) {
+    ["barman", "Barman / Mixologist"],
+    ["mixologist", "Barman / Mixologist"],
+    ["developer", "Developer"],
+    ["software engineer", "Developer"],
+    ["web developer", "Developer"],
+    ["accountant", "Accountant"],
+    ["comptable", "Accountant"],
+    ["manager", "Manager"],
+    ["responsable", "Manager"],
+    ["designer", "Designer"],
+    ["graphic designer", "Designer"],
+    ["chef", "Chef / Cook"],
+    ["cook", "Chef / Cook"],
+    ["cuisinier", "Chef / Cook"]
 
-          return profession.name;
+  ];
 
-        }
+  for (const [keyword, result] of professions) {
 
+    if (lower.includes(keyword)) {
+      return result;
+    }
+
+  }
+
+  return "Not detected";
+}
+
+
+function extractLanguages(text) {
+
+  const found = [];
+
+  const languages = [
+
+    ["French", "French"],
+    ["Français", "French"],
+    ["English", "English"],
+    ["Anglais", "English"],
+    ["Arabic", "Arabic"],
+    ["Arabe", "Arabic"],
+    ["Spanish", "Spanish"],
+    ["Espagnol", "Spanish"],
+    ["German", "German"],
+    ["Allemand", "German"],
+    ["Italian", "Italian"],
+    ["Italien", "Italian"]
+
+  ];
+
+  for (
+    const [keyword, normalized] of languages
+  ) {
+
+    if (
+      text.toLowerCase()
+        .includes(keyword.toLowerCase())
+    ) {
+
+      if (!found.includes(normalized)) {
+        found.push(normalized);
       }
 
     }
-
-    return "Not detected";
-
   }
 
-
-  /*
-   * Extract languages
-   */
-
-  function extractLanguages(text) {
-
-    const found = [];
-
-    const languages = [
-      "French",
-      "Français",
-      "English",
-      "Anglais",
-      "Arabic",
-      "Arabe",
-      "Spanish",
-      "Espagnol",
-      "German",
-      "Allemand",
-      "Italian",
-      "Italien"
-    ];
+  return found.length
+    ? found.join(", ")
+    : "Not detected";
+}
 
 
-    for (const language of languages) {
+function extractBirthDate(text) {
 
-      if (
-        text.toLowerCase()
-          .includes(language.toLowerCase())
-      ) {
-
-        let normalized = language;
-
-        if (
-          language === "Français" ||
-          language === "French"
-        ) {
-          normalized = "French";
-        }
-
-        if (
-          language === "Anglais" ||
-          language === "English"
-        ) {
-          normalized = "English";
-        }
-
-        if (
-          language === "Arabe" ||
-          language === "Arabic"
-        ) {
-          normalized = "Arabic";
-        }
-
-        if (
-          language === "Espagnol" ||
-          language === "Spanish"
-        ) {
-          normalized = "Spanish";
-        }
-
-        if (!found.includes(normalized)) {
-          found.push(normalized);
-        }
-
-      }
-
-    }
-
-    return found.length
-      ? found.join(", ")
-      : "Not detected";
-
-  }
-
-
-  /*
-   * Extract birth date
-   */
-
-  function extractBirthDate(text) {
-
-    const numericDate = text.match(
+  const numericDate =
+    text.match(
       /\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}\b/
     );
 
-    if (numericDate) {
-      return numericDate[0];
-    }
+  if (numericDate) {
+    return numericDate[0];
+  }
 
-
-    const monthDate = text.match(
+  const monthDate =
+    text.match(
       /\b\d{1,2}\s+(jan|janv|janvier|feb|févr|février|mar|mars|apr|avr|avril|may|mai|jun|juin|jul|juil|juillet|aug|août|sep|sept|septembre|oct|octobre|nov|novembre|dec|déc|décembre)\.?\s+\d{4}\b/i
     );
 
-    if (monthDate) {
-      return monthDate[0];
-    }
-
-    return "Not detected";
-
+  if (monthDate) {
+    return monthDate[0];
   }
 
+  return "Not detected";
+}
+
+
+function extractName(text) {
 
   /*
-   * Extract possible name
+   * First look for a clear uppercase name.
    */
 
-  function extractName(text) {
-
-    const lines = cleanText(text)
+  const lines =
+    cleanText(text)
       .split("\n")
       .map(line => line.trim())
       .filter(Boolean);
 
+  for (const line of lines) {
 
-    const blocked = [
-      "curriculum",
-      "vitae",
-      "resume",
-      "expériences",
-      "experiences",
-      "professionnelles",
-      "education",
-      "formation",
-      "compétences",
-      "competences",
-      "languages",
-      "langues",
-      "contact",
-      "profile",
-      "profil",
-      "email",
-      "phone",
-      "telephone",
-      "nationalité",
-      "nationalite",
-      "date"
-    ];
+    if (
+      /^[A-ZÀ-Ÿ][A-ZÀ-Ÿ' -]{3,30}$/.test(line)
+    ) {
 
-
-    for (const line of lines) {
-
-      const lower = line.toLowerCase();
+      const lower =
+        line.toLowerCase();
 
       if (
-        blocked.some(word =>
-          lower.includes(word)
-        )
+        !lower.includes("barman") &&
+        !lower.includes("marrakech") &&
+        !lower.includes("restaurant") &&
+        !lower.includes("experiences") &&
+        !lower.includes("education") &&
+        !lower.includes("langues")
       ) {
-        continue;
+
+        return line;
       }
+    }
+  }
 
 
-      /*
-       * Prefer lines that look like a person's name.
-       */
+  /*
+   * Otherwise look for a normal-looking name.
+   */
 
-      const words = line
-        .replace(/[^A-Za-zÀ-ÿ' -]/g, " ")
+  const blocked = [
+    "curriculum",
+    "vitae",
+    "resume",
+    "expériences",
+    "experiences",
+    "professionnelles",
+    "education",
+    "formation",
+    "compétences",
+    "competences",
+    "languages",
+    "langues",
+    "contact",
+    "profile",
+    "profil",
+    "email",
+    "phone",
+    "telephone",
+    "nationalité",
+    "nationalite",
+    "date"
+  ];
+
+
+  for (const line of lines) {
+
+    const lower =
+      line.toLowerCase();
+
+    if (
+      blocked.some(word =>
+        lower.includes(word)
+      )
+    ) {
+      continue;
+    }
+
+    const words =
+      line
+        .replace(
+          /[^A-Za-zÀ-ÿ' -]/g,
+          " "
+        )
         .split(/\s+/)
         .filter(Boolean);
 
+    if (
+      words.length >= 2 &&
+      words.length <= 4
+    ) {
+
+      const goodWords =
+        words.filter(word =>
+          word.length >= 3
+        );
 
       if (
-        words.length >= 2 &&
-        words.length <= 4
+        goodWords.length >= 2 &&
+        goodWords.length === words.length
       ) {
 
-        const goodWords = words.filter(word => {
-
-          return (
-            word.length >= 3 &&
-            /^[A-Za-zÀ-ÿ]/.test(word)
-          );
-
-        });
-
-
-        if (
-          goodWords.length >= 2 &&
-          goodWords.length === words.length
-        ) {
-
-          const result = goodWords.join(" ");
-
-          /*
-           * Ignore obvious section headings.
-           */
-
-          const resultLower =
-            result.toLowerCase();
-
-          if (
-            !resultLower.includes("barman") &&
-            !resultLower.includes("mixologue") &&
-            !resultLower.includes("marrakech")
-          ) {
-
-            return result;
-
-          }
-
-        }
-
+        return goodWords.join(" ");
       }
-
     }
-
-
-    /*
-     * Try a line containing KHALID-style uppercase names.
-     */
-
-    for (const line of lines) {
-
-      if (
-        /^[A-ZÀ-Ÿ][A-ZÀ-Ÿ' -]{3,30}$/.test(line)
-      ) {
-
-        const lower = line.toLowerCase();
-
-        if (
-          !blocked.some(word =>
-            lower.includes(word)
-          )
-        ) {
-
-          return line;
-
-        }
-
-      }
-
-    }
-
-
-    return "Not detected";
-
   }
 
-
-  /*
-   * Create suggested filename
-   */
-
-  function makeFilename(
-    type,
-    name,
-    profession,
-    location
-  ) {
-
-    const parts = [];
+  return "Not detected";
+}
 
 
-    function addPart(value) {
+function makeFilename(
+  type,
+  name,
+  profession,
+  location
+) {
 
-      if (
-        !value ||
-        value === "Not detected"
-      ) {
-        return;
-      }
+  const parts = [];
 
-      let cleaned = value
-        .replace(/[^a-zA-Z0-9À-ÿ]+/g, "-")
-        .replace(/^-+|-+$/g, "");
+  function addPart(value) {
 
-      if (cleaned) {
-        parts.push(cleaned);
-      }
-
+    if (
+      !value ||
+      value === "Not detected"
+    ) {
+      return;
     }
 
+    const cleaned =
+      value
+        .replace(
+          /[^a-zA-Z0-9À-ÿ]+/g,
+          "-"
+        )
+        .replace(
+          /^-+|-+$/g,
+          ""
+        );
 
-    addPart(name);
-    addPart(profession);
-
-
-    if (type && type !== "Document") {
-
-      addPart(type);
-
+    if (cleaned) {
+      parts.push(cleaned);
     }
-
-
-    addPart(location);
-
-
-    if (parts.length === 0) {
-
-      return "Organized-Document.pdf";
-
-    }
-
-
-    return parts.join("_") + ".pdf";
-
   }
 
+  addPart(name);
+  addPart(profession);
 
-  /*
-   * Display intelligent result
-   *
-   * IMPORTANT:
-   * The fields below are editable.
-   */
-
-  function displayResult(
-    file,
-    text,
-    usedOCR
+  if (
+    type &&
+    type !== "Document"
   ) {
+    addPart(type);
+  }
 
-    const clean = cleanText(text);
+  addPart(location);
 
+  if (parts.length === 0) {
+    return "Organized-Document.pdf";
+  }
 
-    let type =
-      detectDocumentType(clean);
-
-    let name =
-      extractName(text);
-
-    let profession =
-      extractProfession(clean);
-
-    let location =
-      extractLocation(clean);
-
-    let email =
-      extractEmail(clean);
-
-    let phone =
-      extractPhone(clean);
-
-    let languages =
-      extractLanguages(clean);
-
-    let birthDate =
-      extractBirthDate(clean);
+  return parts.join("_") + ".pdf";
+}
 
 
-    resultsBox.innerHTML = "";
+/*
+ * DISPLAY RESULT
+ */
+
+function displayResult(
+  file,
+  text,
+  usedOCR
+) {
+
+  const clean =
+    cleanText(text);
+
+  const type =
+    detectDocumentType(clean);
+
+  const name =
+    extractName(text);
+
+  const profession =
+    extractProfession(clean);
+
+  const location =
+    extractLocation(clean);
+
+  const email =
+    extractEmail(clean);
+
+  const phone =
+    extractPhone(clean);
+
+  const languages =
+    extractLanguages(clean);
+
+  const birthDate =
+    extractBirthDate(clean);
 
 
-    const card =
-      document.createElement("div");
-
-    card.className =
-      "document";
+  resultsBox.innerHTML = "";
 
 
-    card.innerHTML = `
+  const card =
+    document.createElement("div");
 
-      <div style="
-        color:#16803c;
-        font-weight:600;
-        margin-bottom:18px;
-      ">
-        ✓ Document successfully analyzed
-      </div>
+  card.className =
+    "document";
 
 
-      <div style="
-        margin-bottom:20px;
-      ">
+  card.innerHTML = `
 
-        <strong>
-          ${escapeHTML(file.name)}
-        </strong>
+    <div class="success">
+      ✓ Document successfully analyzed
+    </div>
 
-        <div style="
-          color:#666;
-          font-size:14px;
-          margin-top:5px;
-        ">
+    <p>
+      <strong>
+        ${escapeHTML(file.name)}
+      </strong>
+    </p>
 
-          Analysis method:
-          ${usedOCR ? "OCR" : "PDF text"}
+    <p>
+      Analysis method:
+      <strong>
+        ${usedOCR ? "OCR" : "PDF text"}
+      </strong>
+    </p>
 
-        </div>
 
-      </div>
+    <hr>
 
+
+    <div class="field">
 
       <label>
-        <strong>Document type</strong>
+        Document type
       </label>
 
-      <select
-        id="editType"
-        style="
-          width:100%;
-          padding:10px;
-          margin:6px 0 14px;
-          border:1px solid #ccc;
-          border-radius:7px;
-          box-sizing:border-box;
-        "
-      >
+      <select id="editType">
 
         <option
           ${type === "Resume / CV" ? "selected" : ""}
@@ -986,417 +853,360 @@
 
       </select>
 
+    </div>
+
+
+    <div class="field">
 
       <label>
-        <strong>Name</strong>
+        Name
       </label>
 
       <input
         id="editName"
+        type="text"
         value="${escapeHTML(name)}"
-        style="
-          width:100%;
-          padding:10px;
-          margin:6px 0 14px;
-          border:1px solid #ccc;
-          border-radius:7px;
-          box-sizing:border-box;
-        "
       >
 
+    </div>
+
+
+    <div class="field">
 
       <label>
-        <strong>Profession</strong>
+        Profession
       </label>
 
       <input
         id="editProfession"
+        type="text"
         value="${escapeHTML(profession)}"
-        style="
-          width:100%;
-          padding:10px;
-          margin:6px 0 14px;
-          border:1px solid #ccc;
-          border-radius:7px;
-          box-sizing:border-box;
-        "
       >
 
+    </div>
+
+
+    <div class="field">
 
       <label>
-        <strong>Location</strong>
+        Location
       </label>
 
       <input
         id="editLocation"
+        type="text"
         value="${escapeHTML(location)}"
-        style="
-          width:100%;
-          padding:10px;
-          margin:6px 0 14px;
-          border:1px solid #ccc;
-          border-radius:7px;
-          box-sizing:border-box;
-        "
       >
 
+    </div>
+
+
+    <div class="field">
 
       <label>
-        <strong>Email</strong>
+        Email
       </label>
 
       <input
         id="editEmail"
+        type="text"
         value="${escapeHTML(email)}"
-        style="
-          width:100%;
-          padding:10px;
-          margin:6px 0 14px;
-          border:1px solid #ccc;
-          border-radius:7px;
-          box-sizing:border-box;
-        "
       >
 
+    </div>
+
+
+    <div class="field">
 
       <label>
-        <strong>Phone</strong>
+        Phone
       </label>
 
       <input
         id="editPhone"
+        type="text"
         value="${escapeHTML(phone)}"
-        style="
-          width:100%;
-          padding:10px;
-          margin:6px 0 14px;
-          border:1px solid #ccc;
-          border-radius:7px;
-          box-sizing:border-box;
-        "
       >
 
+    </div>
+
+
+    <div class="field">
 
       <label>
-        <strong>Languages</strong>
+        Languages
       </label>
 
       <input
         id="editLanguages"
+        type="text"
         value="${escapeHTML(languages)}"
-        style="
-          width:100%;
-          padding:10px;
-          margin:6px 0 14px;
-          border:1px solid #ccc;
-          border-radius:7px;
-          box-sizing:border-box;
-        "
       >
 
+    </div>
+
+
+    <div class="field">
 
       <label>
-        <strong>Birth date</strong>
+        Birth date
       </label>
 
       <input
         id="editBirthDate"
+        type="text"
         value="${escapeHTML(birthDate)}"
-        style="
-          width:100%;
-          padding:10px;
-          margin:6px 0 18px;
-          border:1px solid #ccc;
-          border-radius:7px;
-          box-sizing:border-box;
-        "
       >
 
-
-      <div style="
-        padding:15px;
-        background:#f5f7fa;
-        border-radius:8px;
-        margin-top:10px;
-      ">
-
-        <strong>
-          Suggested filename:
-        </strong>
-
-        <div
-          id="suggestedFilename"
-          style="
-            margin-top:8px;
-            font-family:monospace;
-            word-break:break-word;
-          "
-        ></div>
-
-      </div>
+    </div>
 
 
-      <button
-        id="copyFilename"
-        style="
-          margin-top:12px;
-          padding:10px 15px;
-          border:0;
-          border-radius:7px;
-          cursor:pointer;
-        "
-      >
-        Copy filename
-      </button>
+    <div class="filename-box">
+
+      <strong>
+        Suggested filename:
+      </strong>
+
+      <div
+        id="suggestedFilename"
+        class="filename"
+      ></div>
+
+    </div>
 
 
-      <details style="
-        margin-top:20px;
-      ">
-
-        <summary>
-          Show raw OCR text
-        </summary>
-
-        <pre style="
-          white-space:pre-wrap;
-          background:#f5f5f5;
-          padding:12px;
-          margin-top:10px;
-          border-radius:7px;
-          max-height:300px;
-          overflow:auto;
-        ">${escapeHTML(text)}</pre>
-
-      </details>
-
-    `;
+    <button id="copyFilename">
+      Copy filename
+    </button>
 
 
-    resultsBox.appendChild(card);
+    <details style="margin-top:20px;">
+
+      <summary>
+        Show raw OCR text
+      </summary>
+
+      <pre>${escapeHTML(text)}</pre>
+
+    </details>
+
+  `;
 
 
-    /*
-     * Find editable fields
-     */
-
-    const editType =
-      card.querySelector("#editType");
-
-    const editName =
-      card.querySelector("#editName");
-
-    const editProfession =
-      card.querySelector("#editProfession");
-
-    const editLocation =
-      card.querySelector("#editLocation");
-
-    const suggestedFilename =
-      card.querySelector("#suggestedFilename");
-
-    const copyFilename =
-      card.querySelector("#copyFilename");
+  resultsBox.appendChild(card);
 
 
-    /*
-     * Update filename whenever
-     * the user changes a field.
-     */
+  /*
+   * Get the actual input boxes
+   */
 
-    function updateFilename() {
+  const editType =
+    card.querySelector("#editType");
 
-      const filename =
-        makeFilename(
-          editType.value,
-          editName.value,
-          editProfession.value,
-          editLocation.value
-        );
+  const editName =
+    card.querySelector("#editName");
 
-      suggestedFilename.textContent =
-        filename;
+  const editProfession =
+    card.querySelector("#editProfession");
 
-    }
+  const editLocation =
+    card.querySelector("#editLocation");
+
+  const suggestedFilename =
+    card.querySelector("#suggestedFilename");
+
+  const copyFilename =
+    card.querySelector("#copyFilename");
 
 
-    [
-      editType,
-      editName,
-      editProfession,
-      editLocation
-    ].forEach(input => {
+  /*
+   * Update filename
+   */
 
-      input.addEventListener(
-        "input",
-        updateFilename
+  function updateFilename() {
+
+    suggestedFilename.textContent =
+      makeFilename(
+        editType.value,
+        editName.value,
+        editProfession.value,
+        editLocation.value
       );
-
-    });
-
-
-    /*
-     * Copy filename button
-     */
-
-    copyFilename.addEventListener(
-      "click",
-      async () => {
-
-        await navigator.clipboard.writeText(
-          suggestedFilename.textContent
-        );
-
-        copyFilename.textContent =
-          "✓ Copied";
-
-        setTimeout(() => {
-
-          copyFilename.textContent =
-            "Copy filename";
-
-        }, 1500);
-
-      }
-    );
-
-
-    /*
-     * Generate filename immediately.
-     */
-
-    updateFilename();
 
   }
 
 
-  /*
-   * Main file processing
-   */
-
-  async function processFile(file) {
-
-    try {
-
-      resultsBox.innerHTML = "";
-
-      showStatus(
-        "Opening PDF..."
-      );
-
-
-      const pdf =
-        await loadPDF(file);
-
-
-      showStatus(
-        "Checking document text..."
-      );
-
-
-      let text =
-        await extractPDFText(pdf);
-
-
-      /*
-       * If PDF contains almost no text,
-       * treat it as a scanned/image PDF.
-       */
-
-      const usefulText =
-        text.replace(/\s/g, "");
-
-
-      let usedOCR = false;
-
-
-      if (usefulText.length < 30) {
-
-        usedOCR = true;
-
-        showStatus(
-          "This looks like a scanned PDF. Starting OCR..."
-        );
-
-        text =
-          await runOCR(pdf);
-
-      }
-
-
-      if (!text.trim()) {
-
-        throw new Error(
-          "No readable text was found."
-        );
-
-      }
-
-
-      showStatus(
-        "Understanding document..."
-      );
-
-
-      displayResult(
-        file,
-        text,
-        usedOCR
-      );
-
-
-      showStatus(
-        "Finished analyzing " + file.name
-      );
-
-
-    } catch (error) {
-
-      console.error(error);
-
-      showStatus(
-        "Something went wrong: " +
-        error.message
-      );
-
-    }
-
-  }
-
-
-  /*
-   * File upload event
-   */
-
-  fileInput.addEventListener(
+  editType.addEventListener(
     "change",
+    updateFilename
+  );
+
+  editName.addEventListener(
+    "input",
+    updateFilename
+  );
+
+  editProfession.addEventListener(
+    "input",
+    updateFilename
+  );
+
+  editLocation.addEventListener(
+    "input",
+    updateFilename
+  );
+
+
+  /*
+   * Copy filename
+   */
+
+  copyFilename.addEventListener(
+    "click",
     async () => {
 
-      const file =
-        fileInput.files[0];
+      await navigator.clipboard.writeText(
+        suggestedFilename.textContent
+      );
 
-      if (!file) {
-        return;
-      }
+      copyFilename.textContent =
+        "✓ Copied";
 
+      setTimeout(() => {
 
-      if (
-        file.type !== "application/pdf"
-      ) {
+        copyFilename.textContent =
+          "Copy filename";
 
-        showStatus(
-          "Please upload a PDF file."
-        );
-
-        return;
-
-      }
-
-
-      await processFile(file);
+      }, 1500);
 
     }
   );
+
+
+  updateFilename();
+
+}
+
+
+/*
+ * Process uploaded PDF
+ */
+
+async function processFile(file) {
+
+  try {
+
+    resultsBox.innerHTML = "";
+
+    showStatus(
+      "Opening PDF..."
+    );
+
+
+    const pdf =
+      await loadPDF(file);
+
+
+    showStatus(
+      "Checking document text..."
+    );
+
+
+    let text =
+      await extractPDFText(pdf);
+
+
+    const usefulText =
+      text.replace(/\s/g, "");
+
+
+    let usedOCR =
+      false;
+
+
+    if (
+      usefulText.length < 30
+    ) {
+
+      usedOCR = true;
+
+      showStatus(
+        "Scanned PDF detected. Starting OCR..."
+      );
+
+      text =
+        await runOCR(pdf);
+
+    }
+
+
+    if (!text.trim()) {
+
+      throw new Error(
+        "No readable text was found."
+      );
+
+    }
+
+
+    showStatus(
+      "Understanding document..."
+    );
+
+
+    displayResult(
+      file,
+      text,
+      usedOCR
+    );
+
+
+    showStatus(
+      "Finished analyzing " +
+      file.name
+    );
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    showStatus(
+      "Something went wrong: " +
+      error.message
+    );
+
+  }
+
+}
+
+
+fileInput.addEventListener(
+  "change",
+  async () => {
+
+    const file =
+      fileInput.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (
+      file.type !== "application/pdf"
+    ) {
+
+      showStatus(
+        "Please upload a PDF file."
+      );
+
+      return;
+    }
+
+    await processFile(file);
+
+  }
+);
 
 </script>
 
