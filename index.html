@@ -440,9 +440,9 @@ console.log("OCR TEXT:", text);
         invoiceNumber
       );
 
-    const document = document.createElement("div");
+    const resultCard = document.createElement("div");
 
-    document.className = "document";
+  resultCard.className = "document";
 
     document.innerHTML = `
 
@@ -492,7 +492,7 @@ console.log("OCR TEXT:", text);
 
     `;
 
-    results.appendChild(document);
+    results.appendChild(resultCard);
   }
 
   async function processFile(file) {
