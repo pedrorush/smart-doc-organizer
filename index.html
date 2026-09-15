@@ -6,16 +6,11 @@
 
   <title>SmartDoc Organizer</title>
 
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
+
+  <!-- Tesseract OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
-  <script type="module">
-    import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs";
-
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs";
-
-    window.pdfjsLib = pdfjsLib;
-  </script>
 
   <style>
     * {
@@ -45,13 +40,13 @@
     }
 
     .upload-box {
+      display: block;
       border: 2px dashed #9ca3af;
       border-radius: 14px;
       padding: 45px 20px;
       text-align: center;
       background: white;
       cursor: pointer;
-      transition: 0.2s;
     }
 
     .upload-box:hover,
@@ -66,25 +61,25 @@
       margin-bottom: 10px;
     }
 
-    input[type="file"] {
+    #fileInput {
       display: none;
     }
 
     .status {
-      margin-top: 25px;
+      display: none;
+      margin-top: 20px;
       padding: 15px;
       border-radius: 10px;
       background: white;
-      display: none;
     }
 
     .result {
+      display: none;
       margin-top: 25px;
       background: white;
       border-radius: 14px;
       padding: 25px;
       box-shadow: 0 4px 18px rgba(0,0,0,0.06);
-      display: none;
     }
 
     .success {
@@ -95,25 +90,16 @@
       font-weight: bold;
     }
 
-    .filename {
-      background: #f3f4f6;
-      padding: 12px;
-      border-radius: 8px;
-      word-break: break-all;
-      font-family: monospace;
-      margin-top: 8px;
-    }
-
     .field {
       margin-bottom: 15px;
     }
 
     .field label {
       display: block;
+      margin-bottom: 5px;
       font-size: 13px;
       font-weight: bold;
       color: #6b7280;
-      margin-bottom: 5px;
     }
 
     .field input {
@@ -124,13 +110,22 @@
       font-size: 15px;
     }
 
+    .filename {
+      margin-top: 8px;
+      padding: 12px;
+      background: #f3f4f6;
+      border-radius: 8px;
+      font-family: monospace;
+      word-break: break-all;
+    }
+
     button {
-      border: none;
+      border: 0;
       border-radius: 8px;
       padding: 11px 16px;
       cursor: pointer;
       font-weight: bold;
-      margin-top: 10px;
+      margin-top: 12px;
       margin-right: 8px;
     }
 
@@ -154,16 +149,12 @@
       margin-top: 15px;
       padding: 15px;
       background: #111827;
-      color: #f9fafb;
+      color: white;
       border-radius: 8px;
       white-space: pre-wrap;
       max-height: 400px;
       overflow: auto;
       font-size: 13px;
-    }
-
-    .loading {
-      font-weight: bold;
     }
   </style>
 </head>
@@ -179,36 +170,96 @@
   </div>
 
   <label class="upload-box" id="uploadBox">
+
     <strong>Drop a PDF here</strong>
+
     <span>or click to choose a PDF</span>
+
     <br><br>
-    <small>SmartDoc can read normal PDFs and scanned PDFs using OCR.</small>
+
+    <small>
+      SmartDoc can read normal PDFs and scanned PDFs using OCR.
+    </small>
 
     <input
       type="file"
       id="fileInput"
-      accept="application/pdf,.pdf"
+      accept=".pdf,application/pdf"
     >
+
   </label>
 
-  <div class="status" id="status"></div>
+  <div id="status" class="status"></div>
 
-  <div class="result" id="result"></div>
+  <div id="result" class="result"></div>
 
 </div>
+
 
 <script>
 
 let currentFile = null;
 let currentSuggestedFilename = "";
 let currentRawText = "";
+let pdfjsReady = false;
 
 
-/* -----------------------------
-   BASIC TEXT CLEANING
------------------------------ */
+/* --------------------------------
+   LOAD PDF.JS
+-------------------------------- */
+
+async function loadPdfJs() {
+
+  if (window.pdfjsLib) {
+    pdfjsReady = true;
+    return;
+  }
+
+  try {
+
+    const module =
+      await import(
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs"
+      );
+
+    window.pdfjsLib = module;
+
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+
+    pdfjsReady = true;
+
+  } catch (error) {
+
+    console.error("PDF.js failed to load:", error);
+
+    throw new Error(
+      "PDF reader could not load."
+    );
+  }
+}
+
+
+/* --------------------------------
+   STATUS
+-------------------------------- */
+
+function setStatus(message) {
+
+  const status =
+    document.getElementById("status");
+
+  status.textContent = message;
+  status.style.display = "block";
+}
+
+
+/* --------------------------------
+   CLEAN TEXT
+-------------------------------- */
 
 function cleanText(text) {
+
   return (text || "")
     .replace(/\r/g, " ")
     .replace(/\n+/g, "\n")
@@ -217,20 +268,21 @@ function cleanText(text) {
 }
 
 
-/* -----------------------------
+/* --------------------------------
    DOCUMENT TYPE
------------------------------ */
+-------------------------------- */
 
 function detectDocumentType(text) {
 
   const lower =
-    text.toLowerCase()
+    text
+      .toLowerCase()
       .replace(/\s+/g, " ")
       .trim();
 
   if (
-    /\binvoice\s*(number|no|#|date)?\b/i.test(lower) ||
-    /\bfacture\s*(n°|no|numero|numéro|date)?\b/i.test(lower) ||
+    /\binvoice\b/i.test(lower) ||
+    /\bfacture\b/i.test(lower) ||
     /\btotal\s+(due|amount|ttc)\b/i.test(lower)
   ) {
     return "Invoice";
@@ -263,6 +315,7 @@ function detectDocumentType(text) {
   let resumeScore = 0;
 
   for (const signal of resumeSignals) {
+
     if (signal.test(lower)) {
       resumeScore++;
     }
@@ -271,6 +324,7 @@ function detectDocumentType(text) {
   if (resumeScore >= 2) {
     return "Resume / CV";
   }
+
 
   const contractSignals = [
     /\bcontract\b/i,
@@ -283,6 +337,7 @@ function detectDocumentType(text) {
   let contractScore = 0;
 
   for (const signal of contractSignals) {
+
     if (signal.test(lower)) {
       contractScore++;
     }
@@ -292,6 +347,7 @@ function detectDocumentType(text) {
     return "Contract";
   }
 
+
   if (
     /\bmarketing campaign\b/i.test(lower) ||
     /\bmarketing plan\b/i.test(lower) ||
@@ -299,6 +355,7 @@ function detectDocumentType(text) {
   ) {
     return "Marketing";
   }
+
 
   if (
     /\boperations report\b/i.test(lower) ||
@@ -312,29 +369,31 @@ function detectDocumentType(text) {
 }
 
 
-/* -----------------------------
+/* --------------------------------
    EMAIL
------------------------------ */
+-------------------------------- */
 
 function extractEmail(text) {
 
-  const match = text.match(
-    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
-  );
+  const match =
+    text.match(
+      /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
+    );
 
   return match ? match[0] : "";
 }
 
 
-/* -----------------------------
+/* --------------------------------
    PHONE
------------------------------ */
+-------------------------------- */
 
 function extractPhone(text) {
 
-  const matches = text.match(
-    /(?:\+?\d[\d\s().-]{7,}\d)/g
-  );
+  const matches =
+    text.match(
+      /(?:\+?\d[\d\s().-]{7,}\d)/g
+    );
 
   if (!matches) {
     return "";
@@ -344,24 +403,25 @@ function extractPhone(text) {
 }
 
 
-/* -----------------------------
+/* --------------------------------
    BIRTH DATE
------------------------------ */
+-------------------------------- */
 
 function extractBirthDate(text) {
 
   const patterns = [
 
-    /\b(\d{1,2})\s+(jan(?:uary|vier)?|feb(?:ruary|ruary)?|mars|march|avr(?:il)?|april|mai|may|juin|june|juil(?:let)?|july|août|august|sept(?:embre|ember)?|oct(?:obre|ober)?|nov(?:embre|ember)?|déc(?:embre)?|december)\.?\s+(\d{4})\b/i,
+    /\b\d{1,2}\s+(jan(?:uary|vier)?|feb(?:ruary|ruary)?|mars|march|avr(?:il)?|april|mai|may|juin|june|juil(?:let)?|july|août|august|sept(?:embre|ember)?|oct(?:obre|ober)?|nov(?:embre|ember)?|déc(?:embre)?|december)\.?\s+\d{4}\b/i,
 
-    /\b(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})\b/,
+    /\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}\b/,
 
-    /\b(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})\b/
+    /\b\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2}\b/
   ];
 
   for (const pattern of patterns) {
 
-    const match = text.match(pattern);
+    const match =
+      text.match(pattern);
 
     if (match) {
       return match[0];
@@ -372,9 +432,9 @@ function extractBirthDate(text) {
 }
 
 
-/* -----------------------------
+/* --------------------------------
    LOCATION
------------------------------ */
+-------------------------------- */
 
 function extractLocation(text) {
 
@@ -400,7 +460,10 @@ function extractLocation(text) {
   for (const location of locations) {
 
     const regex =
-      new RegExp("\\b" + location + "\\b", "i");
+      new RegExp(
+        "\\b" + location + "\\b",
+        "i"
+      );
 
     if (regex.test(text)) {
       return location;
@@ -411,9 +474,9 @@ function extractLocation(text) {
 }
 
 
-/* -----------------------------
+/* --------------------------------
    LANGUAGES
------------------------------ */
+-------------------------------- */
 
 function extractLanguages(text) {
 
@@ -428,10 +491,10 @@ function extractLanguages(text) {
     ["Italian", /\bitalian\b|\bitalien\b/i]
   ];
 
-  for (const [name, regex] of languages) {
+  for (const item of languages) {
 
-    if (regex.test(text)) {
-      found.push(name);
+    if (item[1].test(text)) {
+      found.push(item[0]);
     }
   }
 
@@ -439,51 +502,39 @@ function extractLanguages(text) {
 }
 
 
-/* -----------------------------
+/* --------------------------------
    PROFESSION
------------------------------ */
+-------------------------------- */
 
 function extractProfession(text) {
 
-  const lower = text.toLowerCase();
-
   const professions = [
 
-    ["Barman / Mixologist",
-      /barman|mixologist|bartender/i],
+    ["Barman / Mixologist", /barman|mixologist|bartender/i],
 
-    ["Manager",
-      /\bmanager\b|management/i],
+    ["Manager", /\bmanager\b|management/i],
 
-    ["Accountant",
-      /accountant|accounting/i],
+    ["Accountant", /accountant|accounting/i],
 
-    ["Marketing",
-      /marketing|public relations/i],
+    ["Marketing", /marketing|public relations/i],
 
-    ["Developer",
-      /software developer|web developer|developer/i],
+    ["Developer", /software developer|web developer|\bdeveloper\b/i],
 
-    ["Designer",
-      /graphic designer|designer/i],
+    ["Designer", /graphic designer|\bdesigner\b/i],
 
-    ["Engineer",
-      /engineer|engineering/i],
+    ["Engineer", /\bengineer\b|engineering/i],
 
-    ["Teacher",
-      /teacher|teaching/i],
+    ["Teacher", /\bteacher\b|teaching/i],
 
-    ["Chef",
-      /\bchef\b|cook/i],
+    ["Chef", /\bchef\b|cook/i],
 
-    ["Sales",
-      /sales representative|sales manager|sales/i]
+    ["Sales", /sales representative|sales manager|\bsales\b/i]
   ];
 
-  for (const [profession, regex] of professions) {
+  for (const item of professions) {
 
-    if (regex.test(lower)) {
-      return profession;
+    if (item[1].test(text)) {
+      return item[0];
     }
   }
 
@@ -491,24 +542,33 @@ function extractProfession(text) {
 }
 
 
-/* -----------------------------
+/* --------------------------------
    NAME
------------------------------ */
+-------------------------------- */
 
 function extractName(text) {
 
-  const lines = text
-    .split("\n")
-    .map(line => line.trim())
-    .filter(Boolean);
+  const lines =
+    text
+      .split("\n")
+      .map(line => line.trim())
+      .filter(Boolean);
 
-  const email = extractEmail(text);
+  const email =
+    extractEmail(text);
 
-  for (let i = 0; i < Math.min(lines.length, 40); i++) {
+  for (
+    let i = 0;
+    i < Math.min(lines.length, 40);
+    i++
+  ) {
 
     const line = lines[i];
 
-    if (email && line.includes(email)) {
+    if (
+      email &&
+      line.includes(email)
+    ) {
       continue;
     }
 
@@ -525,9 +585,7 @@ function extractName(text) {
       continue;
     }
 
-    if (
-      /^(KHALID)$/i.test(line)
-    ) {
+    if (/^KHALID$/i.test(line)) {
       return line;
     }
 
@@ -549,9 +607,9 @@ function extractName(text) {
 }
 
 
-/* -----------------------------
-   FILENAME
------------------------------ */
+/* --------------------------------
+   SAFE FILENAME
+-------------------------------- */
 
 function safeFilenamePart(value) {
 
@@ -563,76 +621,89 @@ function safeFilenamePart(value) {
 }
 
 
+/* --------------------------------
+   MAKE FILENAME
+-------------------------------- */
+
 function makeFilename(info, originalName) {
 
   const parts = [];
 
-  const name =
-    safeFilenamePart(info.name);
-
-  const profession =
-    safeFilenamePart(info.profession);
-
-  const type =
-    safeFilenamePart(
-      info.documentType
-        .replace(/\//g, "-")
+  if (info.name) {
+    parts.push(
+      safeFilenamePart(info.name)
     );
-
-  const location =
-    safeFilenamePart(info.location);
-
-  if (name) {
-    parts.push(name);
   }
 
-  if (profession) {
-    parts.push(profession);
+  if (info.profession) {
+    parts.push(
+      safeFilenamePart(info.profession)
+    );
   }
 
-  if (type) {
-    parts.push(type);
+  if (info.documentType) {
+    parts.push(
+      safeFilenamePart(
+        info.documentType.replace(/\//g, "-")
+      )
+    );
   }
 
-  if (location) {
-    parts.push(location);
+  if (info.location) {
+    parts.push(
+      safeFilenamePart(info.location)
+    );
   }
 
   if (parts.length === 0) {
 
-    const base =
-      originalName
-        .replace(/\.pdf$/i, "");
-
-    return safeFilenamePart(base) + ".pdf";
+    return (
+      safeFilenamePart(
+        originalName.replace(/\.pdf$/i, "")
+      ) + ".pdf"
+    );
   }
 
   return parts.join("_") + ".pdf";
 }
 
 
-/* -----------------------------
-   PDF TEXT EXTRACTION
------------------------------ */
+/* --------------------------------
+   EXTRACT PDF TEXT
+-------------------------------- */
 
 async function extractPdfText(file) {
 
-  const arrayBuffer =
+  await loadPdfJs();
+
+  const buffer =
     await file.arrayBuffer();
 
   const pdf =
-    await window.pdfjsLib.getDocument({
-      data: arrayBuffer
-    }).promise;
+    await window.pdfjsLib
+      .getDocument({
+        data: buffer
+      })
+      .promise;
 
-  let fullText = "";
+  let text = "";
 
   const maxPages =
     Math.min(pdf.numPages, 10);
 
-  for (let pageNumber = 1;
-       pageNumber <= maxPages;
-       pageNumber++) {
+  for (
+    let pageNumber = 1;
+    pageNumber <= maxPages;
+    pageNumber++
+  ) {
+
+    setStatus(
+      "Reading PDF page " +
+      pageNumber +
+      " of " +
+      maxPages +
+      "..."
+    );
 
     const page =
       await pdf.getPage(pageNumber);
@@ -645,19 +716,19 @@ async function extractPdfText(file) {
         .map(item => item.str)
         .join(" ");
 
-    fullText += "\n" + pageText;
+    text += "\n" + pageText;
   }
 
   return {
-    text: cleanText(fullText),
-    pdf
+    text: cleanText(text),
+    pdf: pdf
   };
 }
 
 
-/* -----------------------------
+/* --------------------------------
    OCR
------------------------------ */
+-------------------------------- */
 
 async function runOCR(file, pdf) {
 
@@ -666,9 +737,19 @@ async function runOCR(file, pdf) {
   const maxPages =
     Math.min(pdf.numPages, 3);
 
-  for (let pageNumber = 1;
-       pageNumber <= maxPages;
-       pageNumber++) {
+  for (
+    let pageNumber = 1;
+    pageNumber <= maxPages;
+    pageNumber++
+  ) {
+
+    setStatus(
+      "Preparing OCR page " +
+      pageNumber +
+      " of " +
+      maxPages +
+      "..."
+    );
 
     const page =
       await pdf.getPage(pageNumber);
@@ -695,6 +776,7 @@ async function runOCR(file, pdf) {
       viewport: viewport
     }).promise;
 
+
     const result =
       await Tesseract.recognize(
         canvas,
@@ -702,7 +784,10 @@ async function runOCR(file, pdf) {
         {
           logger: message => {
 
-            if (message.status === "recognizing text") {
+            if (
+              message.status ===
+              "recognizing text"
+            ) {
 
               const percent =
                 Math.round(
@@ -710,7 +795,9 @@ async function runOCR(file, pdf) {
                 );
 
               setStatus(
-                "OCR in progress... " +
+                "OCR in progress — page " +
+                pageNumber +
+                ": " +
                 percent +
                 "%"
               );
@@ -719,26 +806,28 @@ async function runOCR(file, pdf) {
         }
       );
 
-    text += "\n" + result.data.text;
+    text +=
+      "\n" +
+      result.data.text;
   }
 
   return cleanText(text);
 }
 
 
-/* -----------------------------
-   ANALYSIS
------------------------------ */
+/* --------------------------------
+   ANALYZE
+-------------------------------- */
 
 async function analyzeFile(file) {
 
   currentFile = file;
 
   setStatus(
-    "Reading " + file.name + "..."
+    "Starting analysis..."
   );
 
-  let pdfResult =
+  const pdfResult =
     await extractPdfText(file);
 
   let text =
@@ -753,7 +842,7 @@ async function analyzeFile(file) {
     usedOCR = true;
 
     setStatus(
-      "This looks like a scanned PDF. Starting OCR..."
+      "Scanned PDF detected. Starting OCR..."
     );
 
     text =
@@ -763,7 +852,8 @@ async function analyzeFile(file) {
       );
   }
 
-  currentRawText = text;
+  currentRawText =
+    text;
 
   displayResult(
     file,
@@ -773,9 +863,9 @@ async function analyzeFile(file) {
 }
 
 
-/* -----------------------------
+/* --------------------------------
    DISPLAY RESULT
------------------------------ */
+-------------------------------- */
 
 function displayResult(
   file,
@@ -819,10 +909,14 @@ function displayResult(
       file.name
     );
 
-  const resultCard =
-    document.getElementById("result");
 
-  resultCard.innerHTML = "";
+  const result =
+    document.getElementById(
+      "result"
+    );
+
+  result.innerHTML = "";
+
 
   const success =
     document.createElement("div");
@@ -833,7 +927,9 @@ function displayResult(
   success.textContent =
     "✓ Document successfully analyzed";
 
-  resultCard.appendChild(success);
+  result.appendChild(
+    success
+  );
 
 
   const fileName =
@@ -844,7 +940,9 @@ function displayResult(
     escapeHtml(file.name) +
     "</strong>";
 
-  resultCard.appendChild(fileName);
+  result.appendChild(
+    fileName
+  );
 
 
   const method =
@@ -854,120 +952,122 @@ function displayResult(
     "<strong>Analysis method:</strong> " +
     (usedOCR ? "OCR" : "PDF text");
 
-  resultCard.appendChild(method);
+  result.appendChild(
+    method
+  );
 
 
-  addEditableField(
-    resultCard,
+  addField(
+    result,
     "Document type",
     info.documentType
   );
 
-  addEditableField(
-    resultCard,
+  addField(
+    result,
     "Name",
     info.name
   );
 
-  addEditableField(
-    resultCard,
+  addField(
+    result,
     "Profession",
     info.profession
   );
 
-  addEditableField(
-    resultCard,
+  addField(
+    result,
     "Location",
     info.location
   );
 
-  addEditableField(
-    resultCard,
+  addField(
+    result,
     "Email",
     info.email
   );
 
-  addEditableField(
-    resultCard,
+  addField(
+    result,
     "Phone",
     info.phone
   );
 
-  addEditableField(
-    resultCard,
+  addField(
+    result,
     "Languages",
     info.languages
   );
 
-  addEditableField(
-    resultCard,
+  addField(
+    result,
     "Birth date",
     info.birthDate
   );
 
 
-  const filenameTitle =
+  const title =
     document.createElement("p");
 
-  filenameTitle.innerHTML =
-    "<strong>Suggested filename:</strong>";
-
-  filenameTitle.style.marginTop =
+  title.style.marginTop =
     "25px";
 
-  resultCard.appendChild(
-    filenameTitle
+  title.innerHTML =
+    "<strong>Suggested filename:</strong>";
+
+  result.appendChild(
+    title
   );
 
 
-  const filenameBox =
+  const filename =
     document.createElement("div");
 
-  filenameBox.className =
+  filename.className =
     "filename";
 
-  filenameBox.id =
+  filename.id =
     "filenameBox";
 
-  filenameBox.textContent =
+  filename.textContent =
     currentSuggestedFilename;
 
-  resultCard.appendChild(
-    filenameBox
+  result.appendChild(
+    filename
   );
 
 
-  const downloadButton =
+  const download =
     document.createElement("button");
 
-  downloadButton.className =
+  download.className =
     "download-btn";
 
-  downloadButton.textContent =
+  download.textContent =
     "Download organized PDF";
 
-  downloadButton.onclick =
+  download.onclick =
     downloadOrganizedFile;
 
-  resultCard.appendChild(
-    downloadButton
+  result.appendChild(
+    download
   );
 
 
-  const copyButton =
+  const copy =
     document.createElement("button");
 
-  copyButton.className =
+  copy.className =
     "copy-btn";
 
-  copyButton.textContent =
+  copy.textContent =
     "Copy filename";
 
-  copyButton.onclick =
+  copy.onclick =
     copyFilename;
 
-  resultCard.appendChild(
-    copyButton
+  result.appendChild(
+    copy
   );
 
 
@@ -981,40 +1081,42 @@ function displayResult(
     "Show raw OCR / PDF text";
 
   rawButton.onclick =
-    () => {
+    function () {
 
       const raw =
-        document.getElementById("rawText");
+        document.getElementById(
+          "rawText"
+        );
 
       raw.style.display =
-        raw.style.display === "none"
-          ? "block"
-          : "none";
+        raw.style.display === "block"
+          ? "none"
+          : "block";
     };
 
-  resultCard.appendChild(
+  result.appendChild(
     rawButton
   );
 
 
-  const rawText =
+  const raw =
     document.createElement("div");
 
-  rawText.className =
+  raw.className =
     "raw-text";
 
-  rawText.id =
+  raw.id =
     "rawText";
 
-  rawText.textContent =
+  raw.textContent =
     clean;
 
-  resultCard.appendChild(
-    rawText
+  result.appendChild(
+    raw
   );
 
 
-  resultCard.style.display =
+  result.style.display =
     "block";
 
   setStatus(
@@ -1023,11 +1125,11 @@ function displayResult(
 }
 
 
-/* -----------------------------
-   EDITABLE FIELDS
------------------------------ */
+/* --------------------------------
+   EDITABLE FIELD
+-------------------------------- */
 
-function addEditableField(
+function addField(
   container,
   label,
   value
@@ -1039,11 +1141,13 @@ function addEditableField(
   field.className =
     "field";
 
+
   const labelElement =
     document.createElement("label");
 
   labelElement.textContent =
     label;
+
 
   const input =
     document.createElement("input");
@@ -1059,6 +1163,7 @@ function addEditableField(
     updateFilename
   );
 
+
   field.appendChild(
     labelElement
   );
@@ -1073,24 +1178,27 @@ function addEditableField(
 }
 
 
-/* -----------------------------
+/* --------------------------------
    UPDATE FILENAME
------------------------------ */
+-------------------------------- */
 
 function updateFilename() {
 
-  const fields =
+  const inputs =
     document.querySelectorAll(
       "#result input"
     );
 
   const values = {};
 
-  fields.forEach(input => {
+  inputs.forEach(
+    input => {
 
-    values[input.dataset.field] =
-      input.value.trim();
-  });
+      values[input.dataset.field] =
+        input.value.trim();
+    }
+  );
+
 
   const info = {
 
@@ -1101,11 +1209,13 @@ function updateFilename() {
       values["Profession"] || "",
 
     documentType:
-      values["Document type"] || "Document",
+      values["Document type"] ||
+      "Document",
 
     location:
       values["Location"] || ""
   };
+
 
   currentSuggestedFilename =
     makeFilename(
@@ -1114,6 +1224,7 @@ function updateFilename() {
         ? currentFile.name
         : "document.pdf"
     );
+
 
   const filenameBox =
     document.getElementById(
@@ -1128,9 +1239,9 @@ function updateFilename() {
 }
 
 
-/* -----------------------------
-   DOWNLOAD ORGANIZED PDF
------------------------------ */
+/* --------------------------------
+   DOWNLOAD
+-------------------------------- */
 
 function downloadOrganizedFile() {
 
@@ -1140,10 +1251,12 @@ function downloadOrganizedFile() {
 
   updateFilename();
 
+
   const url =
     URL.createObjectURL(
       currentFile
     );
+
 
   const link =
     document.createElement("a");
@@ -1154,6 +1267,7 @@ function downloadOrganizedFile() {
   link.download =
     currentSuggestedFilename;
 
+
   document.body.appendChild(
     link
   );
@@ -1162,15 +1276,19 @@ function downloadOrganizedFile() {
 
   link.remove();
 
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 1000);
+
+  setTimeout(
+    function () {
+      URL.revokeObjectURL(url);
+    },
+    1000
+  );
 }
 
 
-/* -----------------------------
-   COPY FILENAME
------------------------------ */
+/* --------------------------------
+   COPY
+-------------------------------- */
 
 async function copyFilename() {
 
@@ -1195,28 +1313,9 @@ async function copyFilename() {
 }
 
 
-/* -----------------------------
-   STATUS
------------------------------ */
-
-function setStatus(message) {
-
-  const status =
-    document.getElementById(
-      "status"
-    );
-
-  status.textContent =
-    message;
-
-  status.style.display =
-    "block";
-}
-
-
-/* -----------------------------
-   HTML ESCAPE
------------------------------ */
+/* --------------------------------
+   ESCAPE HTML
+-------------------------------- */
 
 function escapeHtml(value) {
 
@@ -1229,9 +1328,9 @@ function escapeHtml(value) {
 }
 
 
-/* -----------------------------
+/* --------------------------------
    FILE HANDLING
------------------------------ */
+-------------------------------- */
 
 const fileInput =
   document.getElementById(
@@ -1246,7 +1345,7 @@ const uploadBox =
 
 fileInput.addEventListener(
   "change",
-  event => {
+  function (event) {
 
     const file =
       event.target.files[0];
@@ -1260,7 +1359,7 @@ fileInput.addEventListener(
 
 uploadBox.addEventListener(
   "dragover",
-  event => {
+  function (event) {
 
     event.preventDefault();
 
@@ -1273,7 +1372,7 @@ uploadBox.addEventListener(
 
 uploadBox.addEventListener(
   "dragleave",
-  () => {
+  function () {
 
     uploadBox.classList.remove(
       "dragover"
@@ -1284,7 +1383,7 @@ uploadBox.addEventListener(
 
 uploadBox.addEventListener(
   "drop",
-  event => {
+  function (event) {
 
     event.preventDefault();
 
@@ -1302,15 +1401,17 @@ uploadBox.addEventListener(
 );
 
 
-/* -----------------------------
+/* --------------------------------
    HANDLE FILE
------------------------------ */
+-------------------------------- */
 
 async function handleFile(file) {
 
   if (
     file.type !== "application/pdf" &&
-    !file.name.toLowerCase().endsWith(".pdf")
+    !file.name
+      .toLowerCase()
+      .endsWith(".pdf")
   ) {
 
     setStatus(
@@ -1320,6 +1421,7 @@ async function handleFile(file) {
     return;
   }
 
+
   const result =
     document.getElementById(
       "result"
@@ -1327,6 +1429,7 @@ async function handleFile(file) {
 
   result.style.display =
     "none";
+
 
   try {
 
@@ -1337,7 +1440,7 @@ async function handleFile(file) {
     console.error(error);
 
     setStatus(
-      "Something went wrong while analyzing the PDF."
+      "Something went wrong while analyzing the PDF. Please try again."
     );
   }
 }
