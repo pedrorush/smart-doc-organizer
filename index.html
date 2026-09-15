@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>SmartDoc Organizer</title>
 
   <style>
@@ -13,14 +14,14 @@
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #f5f7fb;
-      color: #1f2937;
+      background: #f4f6f8;
+      color: #17202a;
     }
 
     header {
       background: white;
       padding: 20px 40px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #ddd;
     }
 
     header h1 {
@@ -29,8 +30,8 @@
     }
 
     main {
-      max-width: 900px;
-      margin: 60px auto;
+      max-width: 1000px;
+      margin: 50px auto;
       padding: 20px;
     }
 
@@ -41,24 +42,20 @@
 
     .hero h2 {
       font-size: 42px;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
     }
 
     .hero p {
+      color: #667085;
       font-size: 18px;
-      color: #6b7280;
     }
 
     .upload-box {
       background: white;
-      border: 2px dashed #cbd5e1;
+      border: 2px dashed #b8c2cc;
       border-radius: 16px;
-      padding: 60px 30px;
+      padding: 50px 30px;
       text-align: center;
-    }
-
-    .upload-box p {
-      color: #6b7280;
     }
 
     input[type="file"] {
@@ -67,7 +64,7 @@
 
     button {
       margin-top: 20px;
-      padding: 12px 24px;
+      padding: 13px 25px;
       border: none;
       border-radius: 8px;
       background: #111827;
@@ -77,19 +74,36 @@
     }
 
     button:hover {
-      opacity: 0.9;
+      opacity: 0.85;
     }
 
     #results {
-      margin-top: 30px;
+      margin-top: 40px;
+    }
+
+    .category {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #e1e5e9;
+    }
+
+    .category h3 {
+      margin-top: 0;
     }
 
     .file {
-      background: white;
-      padding: 15px 20px;
-      margin-bottom: 10px;
-      border-radius: 10px;
-      border: 1px solid #e5e7eb;
+      padding: 12px;
+      background: #f8fafc;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    .empty {
+      text-align: center;
+      color: #667085;
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -104,8 +118,9 @@
 
   <section class="hero">
     <h2>Organize your documents automatically.</h2>
+
     <p>
-      Upload your messy files and SmartDoc will help you organize them.
+      Upload your files and SmartDoc will categorize them for you.
     </p>
   </section>
 
@@ -114,7 +129,7 @@
     <h3>Upload your documents</h3>
 
     <p>
-      Select one or more files from your computer.
+      Select multiple documents from your computer.
     </p>
 
     <input
@@ -125,46 +140,145 @@
 
     <br>
 
-    <button onclick="showFiles()">
+    <button onclick="organizeFiles()">
       Organize Documents
     </button>
 
   </section>
 
-  <section id="results"></section>
+  <section id="results">
+
+    <p class="empty">
+      Your organized documents will appear here.
+    </p>
+
+  </section>
 
 </main>
 
 <script>
 
-function showFiles() {
+function categorizeFile(filename) {
+
+  const name = filename.toLowerCase();
+
+  // FINANCE
+  if (
+    name.includes("invoice") ||
+    name.includes("receipt") ||
+    name.includes("payment") ||
+    name.includes("expense") ||
+    name.includes("bill")
+  ) {
+    return "💰 Finance";
+  }
+
+  // HR
+  if (
+    name.includes("employee") ||
+    name.includes("contract") ||
+    name.includes("resume") ||
+    name.includes("cv") ||
+    name.includes("salary") ||
+    name.includes("hr")
+  ) {
+    return "👥 Human Resources";
+  }
+
+  // LEGAL
+  if (
+    name.includes("legal") ||
+    name.includes("agreement") ||
+    name.includes("nda") ||
+    name.includes("license") ||
+    name.includes("terms")
+  ) {
+    return "⚖️ Legal";
+  }
+
+  // MARKETING
+  if (
+    name.includes("marketing") ||
+    name.includes("campaign") ||
+    name.includes("advert") ||
+    name.includes("social") ||
+    name.includes("promotion")
+  ) {
+    return "📣 Marketing";
+  }
+
+  // OPERATIONS
+  if (
+    name.includes("policy") ||
+    name.includes("procedure") ||
+    name.includes("report") ||
+    name.includes("operations") ||
+    name.includes("manual")
+  ) {
+    return "⚙️ Operations";
+  }
+
+  // DEFAULT
+  return "📄 Other";
+}
+
+
+function organizeFiles() {
 
   const input = document.getElementById("fileInput");
+
   const results = document.getElementById("results");
 
   results.innerHTML = "";
 
   if (input.files.length === 0) {
-    results.innerHTML = "<p>Please select some documents first.</p>";
+
+    results.innerHTML =
+      '<p class="empty">Please select some documents first.</p>';
+
     return;
   }
 
-  const title = document.createElement("h3");
-  title.textContent = "Your documents";
-  results.appendChild(title);
+  const categories = {};
 
   for (const file of input.files) {
 
-    const item = document.createElement("div");
+    const category = categorizeFile(file.name);
 
-    item.className = "file";
+    if (!categories[category]) {
+      categories[category] = [];
+    }
 
-    item.textContent =
-      "📄 " + file.name +
-      " — Ready to organize";
-
-    results.appendChild(item);
+    categories[category].push(file.name);
   }
+
+  for (const category in categories) {
+
+    const box = document.createElement("div");
+
+    box.className = "category";
+
+    const title = document.createElement("h3");
+
+    title.textContent = category;
+
+    box.appendChild(title);
+
+    categories[category].forEach(function(filename) {
+
+      const fileElement = document.createElement("div");
+
+      fileElement.className = "file";
+
+      fileElement.textContent = "📄 " + filename;
+
+      box.appendChild(fileElement);
+
+    });
+
+    results.appendChild(box);
+  }
+
 }
 
 </script>
