@@ -39,7 +39,6 @@
       border-radius: 16px;
       padding: 45px 20px;
       text-align: center;
-      transition: 0.2s;
     }
 
     .upload-box.dragover {
@@ -70,31 +69,16 @@
       font-weight: bold;
     }
 
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 15px;
-      margin: 25px 0;
-    }
-
-    .stat {
+    .status {
+      margin-top: 20px;
+      padding: 15px;
       background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }
-
-    .stat-number {
-      font-size: 28px;
-      font-weight: bold;
-    }
-
-    .stat-label {
-      color: #6b7280;
-      margin-top: 5px;
+      border-radius: 10px;
+      display: none;
     }
 
     .results {
+      margin-top: 25px;
       display: grid;
       gap: 20px;
     }
@@ -106,13 +90,9 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
 
-    .category h2 {
-      margin-top: 0;
-    }
-
     .file {
       border-top: 1px solid #e5e7eb;
-      padding: 18px 0;
+      padding: 16px 0;
     }
 
     .original {
@@ -122,17 +102,13 @@
     }
 
     .field {
-      margin: 5px 0;
+      margin: 6px 0;
       font-size: 14px;
-    }
-
-    .field strong {
-      color: #374151;
     }
 
     .suggestion {
       margin-top: 12px;
-      padding: 10px;
+      padding: 12px;
       background: #eff6ff;
       border-radius: 8px;
       color: #1d4ed8;
@@ -140,19 +116,12 @@
       word-break: break-word;
     }
 
-    .status {
-      margin-top: 20px;
-      padding: 15px;
-      background: white;
-      border-radius: 10px;
-      color: #6b7280;
-      display: none;
-    }
-
     .empty {
-      color: #9ca3af;
+      background: white;
+      padding: 30px;
       text-align: center;
-      padding: 20px;
+      color: #9ca3af;
+      border-radius: 12px;
     }
   </style>
 </head>
@@ -171,15 +140,15 @@
 
     <h2>Drop your documents here</h2>
 
-    <p>SmartDoc will inspect the text inside your PDF.</p>
+    <p>PDF text will be analyzed directly in your browser.</p>
 
     <label class="button" for="fileInput">
       Choose Files
     </label>
 
     <input
-      type="file"
       id="fileInput"
+      type="file"
       multiple
       accept=".pdf,.txt"
     >
@@ -187,35 +156,6 @@
   </div>
 
   <div class="status" id="status"></div>
-
-  <div class="stats">
-
-    <div class="stat">
-      <div class="stat-number" id="totalFiles">0</div>
-      <div class="stat-label">Files</div>
-    </div>
-
-    <div class="stat">
-      <div class="stat-number" id="financeCount">0</div>
-      <div class="stat-label">Finance</div>
-    </div>
-
-    <div class="stat">
-      <div class="stat-number" id="hrCount">0</div>
-      <div class="stat-label">HR</div>
-    </div>
-
-    <div class="stat">
-      <div class="stat-number" id="legalCount">0</div>
-      <div class="stat-label">Legal</div>
-    </div>
-
-    <div class="stat">
-      <div class="stat-number" id="otherCount">0</div>
-      <div class="stat-label">Other</div>
-    </div>
-
-  </div>
 
   <div id="results" class="results">
 
@@ -231,36 +171,30 @@
 <script type="module">
 
 import * as pdfjsLib from
-"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.105/pdf.min.mjs";
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs";
+
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
-"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.105/pdf.worker.min.mjs";
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs";
 
 
-const uploadBox = document.getElementById("uploadBox");
-const fileInput = document.getElementById("fileInput");
-const results = document.getElementById("results");
-const status = document.getElementById("status");
+const fileInput =
+document.getElementById("fileInput");
 
-const totalFiles = document.getElementById("totalFiles");
-const financeCount = document.getElementById("financeCount");
-const hrCount = document.getElementById("hrCount");
-const legalCount = document.getElementById("legalCount");
-const otherCount = document.getElementById("otherCount");
+const uploadBox =
+document.getElementById("uploadBox");
 
+const results =
+document.getElementById("results");
 
-const categories = [
-  "Finance",
-  "Human Resources",
-  "Legal",
-  "Marketing",
-  "Operations",
-  "Other"
-];
+const status =
+document.getElementById("status");
 
 
 fileInput.addEventListener("change", () => {
+
   analyzeFiles(fileInput.files);
+
 });
 
 
@@ -295,35 +229,22 @@ async function analyzeFiles(files) {
 
   results.innerHTML = "";
 
-  showStatus("Reading your documents...");
-
-  const grouped = {};
-
-  categories.forEach(category => {
-    grouped[category] = [];
-  });
+  showStatus("Starting document analysis...");
 
 
-  let count = 0;
+  for (const file of files) {
 
-
-  for (const file of Array.from(files)) {
-
-    count++;
-
-    showStatus(
-      `Analyzing document ${count} of ${files.length}: ${file.name}`
-    );
-
-
-    let text = "";
+    showStatus("Reading: " + file.name);
 
 
     try {
 
+      let text = "";
+
+
       if (file.type === "application/pdf") {
 
-        text = await extractPdfText(file);
+        text = await readPDF(file);
 
       } else if (file.type === "text/plain") {
 
@@ -331,164 +252,175 @@ async function analyzeFiles(files) {
 
       }
 
+
+      const info =
+        analyzeText(text, file.name);
+
+
+      displayResult(file.name, info);
+
+
     } catch (error) {
 
       console.error(error);
 
+      displayError(
+        file.name,
+        "Could not read this document."
+      );
+
     }
-
-
-    const information =
-      extractInformation(file.name, text);
-
-
-    grouped[information.category].push({
-
-      original: file.name,
-
-      information: information
-
-    });
 
   }
 
 
-  displayResults(grouped);
-
   showStatus(
-    `Finished analyzing ${files.length} document(s).`
+    "Finished analyzing " + files.length + " document(s)."
   );
 
 }
 
 
-async function extractPdfText(file) {
+async function readPDF(file) {
 
-  const arrayBuffer = await file.arrayBuffer();
-
-  const pdf = await pdfjsLib.getDocument({
-    data: arrayBuffer
-  }).promise;
+  const buffer =
+    await file.arrayBuffer();
 
 
-  let fullText = "";
+  const pdf =
+    await pdfjsLib.getDocument({
+      data: buffer
+    }).promise;
 
-  const maxPages = Math.min(pdf.numPages, 10);
+
+  let text = "";
+
+
+  const pages =
+    Math.min(pdf.numPages, 10);
 
 
   for (
     let pageNumber = 1;
-    pageNumber <= maxPages;
+    pageNumber <= pages;
     pageNumber++
   ) {
 
-    const page = await pdf.getPage(pageNumber);
+    const page =
+      await pdf.getPage(pageNumber);
+
 
     const content =
       await page.getTextContent();
 
 
-    const pageText = content.items
-      .map(item => item.str)
-      .join(" ");
+    const pageText =
+      content.items
+        .map(item => item.str)
+        .join(" ");
 
 
-    fullText += pageText + "\n";
+    text += pageText + "\n";
 
   }
 
 
-  return fullText;
+  return text;
 
 }
 
 
-function extractInformation(filename, text) {
-
-  const combined =
-    (filename + "\n" + text);
-
+function analyzeText(text, filename) {
 
   const lower =
-    combined.toLowerCase();
+    (text + " " + filename).toLowerCase();
 
 
+  let type = "Document";
   let category = "Other";
 
 
   if (
     lower.includes("invoice") ||
-    lower.includes("receipt") ||
     lower.includes("amount due") ||
-    lower.includes("subtotal") ||
-    lower.includes("total due")
+    lower.includes("invoice number")
   ) {
 
+    type = "Invoice";
     category = "Finance";
 
-  } else if (
-    lower.includes("resume") ||
-    lower.includes("curriculum vitae") ||
-    lower.includes("employee") ||
-    lower.includes("job application") ||
-    lower.includes("payroll")
+  }
+
+  else if (
+    lower.includes("receipt") ||
+    lower.includes("payment received")
   ) {
 
-    category = "Human Resources";
+    type = "Receipt";
+    category = "Finance";
 
-  } else if (
+  }
+
+  else if (
     lower.includes("contract") ||
-    lower.includes("agreement") ||
-    lower.includes("non-disclosure") ||
-    lower.includes("nda") ||
-    lower.includes("terms and conditions")
+    lower.includes("agreement")
   ) {
 
+    type = "Contract";
     category = "Legal";
 
-  } else if (
-    lower.includes("marketing") ||
-    lower.includes("campaign") ||
-    lower.includes("advertising")
+  }
+
+  else if (
+    lower.includes("resume") ||
+    lower.includes("curriculum vitae")
   ) {
 
+    type = "Resume";
+    category = "Human Resources";
+
+  }
+
+  else if (
+    lower.includes("marketing") ||
+    lower.includes("campaign")
+  ) {
+
+    type = "Marketing Document";
     category = "Marketing";
 
-  } else if (
-    lower.includes("project") ||
+  }
+
+  else if (
     lower.includes("meeting") ||
-    lower.includes("operations") ||
-    lower.includes("internal report")
+    lower.includes("project report")
   ) {
 
+    type = "Operations Document";
     category = "Operations";
 
   }
 
 
   const invoiceNumber =
-    findInvoiceNumber(combined);
+    extractInvoiceNumber(text);
 
 
   const date =
-    findDate(combined);
+    extractDate(text);
 
 
   const amount =
-    findAmount(combined);
+    extractAmount(text);
 
 
   const company =
-    findCompany(combined);
+    extractCompany(text);
 
 
-  const documentType =
-    findDocumentType(lower, category);
-
-
-  const suggestedName =
+  const suggested =
     buildFilename(
-      documentType,
+      type,
       company,
       date,
       invoiceNumber,
@@ -497,89 +429,51 @@ function extractInformation(filename, text) {
 
 
   return {
-
+    type,
     category,
-
-    documentType,
-
-    company,
-
     invoiceNumber,
-
     date,
-
     amount,
-
-    suggestedName,
-
-    textFound: text.length > 0
-
+    company,
+    suggested
   };
 
 }
 
 
-function findDocumentType(text, category) {
+function extractInvoiceNumber(text) {
 
-  const lower = text.toLowerCase();
-
-
-  if (lower.includes("invoice")) {
-    return "Invoice";
-  }
-
-  if (lower.includes("receipt")) {
-    return "Receipt";
-  }
-
-  if (lower.includes("contract")) {
-    return "Contract";
-  }
-
-  if (lower.includes("agreement")) {
-    return "Agreement";
-  }
-
-  if (
-    lower.includes("resume") ||
-    lower.includes("curriculum vitae")
-  ) {
-    return "Resume";
-  }
-
-  if (lower.includes("report")) {
-    return "Report";
-  }
-
-  if (lower.includes("meeting")) {
-    return "Meeting";
-  }
+  const match =
+    text.match(
+      /invoice\s*(?:number|no\.?|#)?\s*[:\-]?\s*([A-Z0-9\-\/]+)/i
+    );
 
 
-  return category === "Other"
-    ? "Document"
-    : category + " Document";
+  return match ? match[1] : "";
 
 }
 
 
-function findInvoiceNumber(text) {
+function extractDate(text) {
 
   const patterns = [
 
-    /invoice\s*(?:number|no|#)?\s*[:\-]?\s*([A-Z0-9\-\/]+)/i,
+    /\b20\d{2}[-\/]\d{1,2}[-\/]\d{1,2}\b/,
 
-    /inv\s*(?:number|no|#)?\s*[:\-]?\s*([A-Z0-9\-\/]+)/i
+    /\b\d{1,2}[-\/]\d{1,2}[-\/]20\d{2}\b/,
+
+    /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+20\d{2}\b/i
 
   ];
 
 
   for (const pattern of patterns) {
 
-    const match = text.match(pattern);
+    const match =
+      text.match(pattern);
 
     if (match) {
-      return match[1];
+      return match[0];
     }
 
   }
@@ -590,100 +484,43 @@ function findInvoiceNumber(text) {
 }
 
 
-function findDate(text) {
+function extractAmount(text) {
 
-  const patterns = [
-
-    /\b(20\d{2}[-\/]\d{1,2}[-\/]\d{1,2})\b/,
-
-    /\b(\d{1,2}[-\/]\d{1,2}[-\/]20\d{2})\b/,
-
-    /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+20\d{2}\b/i
-
-  ];
+  const match =
+    text.match(
+      /(?:total|amount due|total due|grand total)\s*[:\-]?\s*([$€£]\s?[\d,]+(?:\.\d{2})?)/i
+    );
 
 
-  for (const pattern of patterns) {
-
-    const match = text.match(pattern);
-
-    if (match) {
-      return match[1] || match[0];
-    }
-
-  }
-
-
-  return "";
+  return match ? match[1] : "";
 
 }
 
 
-function findAmount(text) {
-
-  const patterns = [
-
-    /(?:total due|amount due|grand total|total)\s*[:\-]?\s*([$€£]\s?[\d,]+(?:\.\d{2})?)/i,
-
-    /([$€£]\s?[\d,]+(?:\.\d{2})?)/
-
-  ];
-
-
-  for (const pattern of patterns) {
-
-    const match = text.match(pattern);
-
-    if (match) {
-      return match[1];
-    }
-
-  }
-
-
-  return "";
-
-}
-
-
-function findCompany(text) {
+function extractCompany(text) {
 
   const lines =
-    text.split(/\n+/)
-      .map(line => line.trim())
-      .filter(line => line.length > 2);
-
-
-  const keywords = [
-    "invoice from",
-    "billed by",
-    "from:",
-    "vendor:",
-    "supplier:",
-    "company:"
-  ];
+    text.split(/\n+/);
 
 
   for (const line of lines) {
 
-    const lower = line.toLowerCase();
+    const clean =
+      line.trim();
 
 
-    for (const keyword of keywords) {
+    if (
+      /^company\s*:/i.test(clean) ||
+      /^vendor\s*:/i.test(clean) ||
+      /^supplier\s*:/i.test(clean) ||
+      /^from\s*:/i.test(clean)
+    ) {
 
-      if (lower.startsWith(keyword)) {
-
-        const value =
-          line.substring(keyword.length)
-            .replace(/^[:\-\s]+/, "")
-            .trim();
-
-
-        if (value.length > 1) {
-          return value;
-        }
-
-      }
+      return clean
+        .split(":")
+        .slice(1)
+        .join(":")
+        .trim();
 
     }
 
@@ -696,47 +533,43 @@ function findCompany(text) {
 
 
 function buildFilename(
-  documentType,
+  type,
   company,
   date,
   invoiceNumber,
-  originalFilename
+  original
 ) {
 
-  const parts = [];
-
-  parts.push(cleanPart(documentType));
+  const parts = [type];
 
 
   if (company) {
-    parts.push(cleanPart(company));
+    parts.push(company);
   }
 
 
   if (date) {
-    parts.push(cleanPart(date));
+    parts.push(date);
   }
 
 
   if (invoiceNumber) {
-    parts.push("No-" + cleanPart(invoiceNumber));
+    parts.push("No-" + invoiceNumber);
   }
 
 
-  let extension = ".pdf";
+  const extension =
+    original.includes(".")
+      ? original.substring(
+          original.lastIndexOf(".")
+        )
+      : ".pdf";
 
 
-  if (originalFilename.includes(".")) {
-
-    extension =
-      originalFilename
-        .substring(originalFilename.lastIndexOf("."))
-        .toLowerCase();
-
-  }
-
-
-  return parts.join("_") + extension;
+  return parts
+    .map(cleanPart)
+    .join("_") +
+    extension.toLowerCase();
 
 }
 
@@ -744,121 +577,95 @@ function buildFilename(
 function cleanPart(value) {
 
   return value
-    .replace(/[^\w\s\-\/]/g, "")
+    .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "-")
-    .replace(/[\/]+/g, "-")
     .substring(0, 50);
 
 }
 
 
-function displayResults(grouped) {
+function displayResult(filename, info) {
 
-  results.innerHTML = "";
-
-  let total = 0;
-
-
-  categories.forEach(category => {
-
-    const files = grouped[category];
-
-    total += files.length;
+  const box =
+    document.createElement("div");
 
 
-    if (files.length === 0) {
-      return;
-    }
+  box.className = "category";
 
 
-    const categoryBox =
-      document.createElement("div");
+  box.innerHTML = `
+
+    <h2>${escapeHtml(info.category)}</h2>
+
+    <div class="file">
+
+      <div class="original">
+        ${escapeHtml(filename)}
+      </div>
+
+      <div class="field">
+        <strong>Document type:</strong>
+        ${escapeHtml(info.type)}
+      </div>
+
+      <div class="field">
+        <strong>Company:</strong>
+        ${escapeHtml(info.company || "Not detected")}
+      </div>
+
+      <div class="field">
+        <strong>Invoice number:</strong>
+        ${escapeHtml(info.invoiceNumber || "Not detected")}
+      </div>
+
+      <div class="field">
+        <strong>Date:</strong>
+        ${escapeHtml(info.date || "Not detected")}
+      </div>
+
+      <div class="field">
+        <strong>Amount:</strong>
+        ${escapeHtml(info.amount || "Not detected")}
+      </div>
+
+      <div class="suggestion">
+        Suggested filename:<br>
+        ${escapeHtml(info.suggested)}
+      </div>
+
+    </div>
+
+  `;
 
 
-    categoryBox.className = "category";
+  results.appendChild(box);
+
+}
 
 
-    categoryBox.innerHTML =
-      `<h2>${category} (${files.length})</h2>`;
+function displayError(filename, message) {
+
+  const box =
+    document.createElement("div");
 
 
-    files.forEach(file => {
-
-      const info =
-        file.information;
+  box.className = "category";
 
 
-      const fileBox =
-        document.createElement("div");
+  box.innerHTML = `
+
+    <div class="file">
+
+      <strong>${escapeHtml(filename)}</strong>
+
+      <p>${escapeHtml(message)}</p>
+
+    </div>
+
+  `;
 
 
-      fileBox.className = "file";
-
-
-      fileBox.innerHTML = `
-
-        <div class="original">
-          ${escapeHtml(file.original)}
-        </div>
-
-        <div class="field">
-          <strong>Type:</strong>
-          ${escapeHtml(info.documentType)}
-        </div>
-
-        <div class="field">
-          <strong>Company:</strong>
-          ${escapeHtml(info.company || "Not detected")}
-        </div>
-
-        <div class="field">
-          <strong>Invoice #:</strong>
-          ${escapeHtml(info.invoiceNumber || "Not detected")}
-        </div>
-
-        <div class="field">
-          <strong>Date:</strong>
-          ${escapeHtml(info.date || "Not detected")}
-        </div>
-
-        <div class="field">
-          <strong>Amount:</strong>
-          ${escapeHtml(info.amount || "Not detected")}
-        </div>
-
-        <div class="suggestion">
-          Suggested filename:<br>
-          ${escapeHtml(info.suggestedName)}
-        </div>
-
-      `;
-
-
-      categoryBox.appendChild(fileBox);
-
-    });
-
-
-    results.appendChild(categoryBox);
-
-  });
-
-
-  totalFiles.textContent = total;
-
-  financeCount.textContent =
-    grouped["Finance"].length;
-
-  hrCount.textContent =
-    grouped["Human Resources"].length;
-
-  legalCount.textContent =
-    grouped["Legal"].length;
-
-  otherCount.textContent =
-    grouped["Other"].length +
-    grouped["Marketing"].length +
-    grouped["Operations"].length;
+  results.appendChild(box);
 
 }
 
