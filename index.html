@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>SmartDoc Organizer</title>
 
   <style>
@@ -14,270 +13,411 @@
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      color: #17202a;
+      background: #f5f7fb;
+      color: #1f2937;
     }
 
-    header {
-      background: white;
-      padding: 20px 40px;
-      border-bottom: 1px solid #ddd;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 24px;
-    }
-
-    main {
+    .container {
       max-width: 1000px;
-      margin: 50px auto;
-      padding: 20px;
+      margin: 0 auto;
+      padding: 40px 20px;
     }
 
-    .hero {
-      text-align: center;
-      margin-bottom: 40px;
+    h1 {
+      margin-bottom: 8px;
+      font-size: 36px;
     }
 
-    .hero h2 {
-      font-size: 42px;
-      margin-bottom: 10px;
-    }
-
-    .hero p {
-      color: #667085;
-      font-size: 18px;
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 30px;
     }
 
     .upload-box {
       background: white;
-      border: 2px dashed #b8c2cc;
+      border: 2px dashed #9ca3af;
       border-radius: 16px;
-      padding: 50px 30px;
+      padding: 45px 20px;
       text-align: center;
-    }
-
-    input[type="file"] {
-      margin-top: 20px;
-    }
-
-    button {
-      margin-top: 20px;
-      padding: 13px 25px;
-      border: none;
-      border-radius: 8px;
-      background: #111827;
-      color: white;
       cursor: pointer;
-      font-size: 16px;
+      transition: 0.2s;
     }
 
-    button:hover {
-      opacity: 0.85;
+    .upload-box:hover,
+    .upload-box.dragover {
+      border-color: #2563eb;
+      background: #eff6ff;
     }
 
-    #results {
-      margin-top: 40px;
+    .upload-box h2 {
+      margin: 0 0 10px;
+    }
+
+    .upload-box p {
+      color: #6b7280;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .button {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 12px 22px;
+      background: #2563eb;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 15px;
+      margin: 25px 0;
+    }
+
+    .stat {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .stat-number {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .stat-label {
+      color: #6b7280;
+      margin-top: 5px;
+    }
+
+    .results {
+      display: grid;
+      gap: 20px;
     }
 
     .category {
       background: white;
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 20px;
-      margin-bottom: 20px;
-      border: 1px solid #e1e5e9;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
 
-    .category h3 {
+    .category h2 {
       margin-top: 0;
+      font-size: 20px;
     }
 
     .file {
-      padding: 12px;
-      background: #f8fafc;
-      border-radius: 8px;
-      margin-top: 8px;
+      border-top: 1px solid #e5e7eb;
+      padding: 14px 0;
+    }
+
+    .original {
+      font-weight: bold;
+      word-break: break-word;
+    }
+
+    .suggestion {
+      margin-top: 6px;
+      color: #2563eb;
+      font-size: 14px;
+      word-break: break-word;
     }
 
     .empty {
+      color: #9ca3af;
       text-align: center;
-      color: #667085;
-      margin-top: 20px;
+      padding: 20px;
     }
   </style>
 </head>
 
 <body>
 
-<header>
-  <h1>📁 SmartDoc Organizer</h1>
-</header>
+  <div class="container">
 
-<main>
+    <h1>SmartDoc Organizer</h1>
 
-  <section class="hero">
-    <h2>Organize your documents automatically.</h2>
-
-    <p>
-      Upload your files and SmartDoc will categorize them for you.
-    </p>
-  </section>
-
-  <section class="upload-box">
-
-    <h3>Upload your documents</h3>
-
-    <p>
-      Select multiple documents from your computer.
+    <p class="subtitle">
+      Upload your documents and automatically organize them.
     </p>
 
-    <input
-      type="file"
-      id="fileInput"
-      multiple
-    >
+    <div class="upload-box" id="uploadBox">
 
-    <br>
+      <h2>Drop your files here</h2>
 
-    <button onclick="organizeFiles()">
-      Organize Documents
-    </button>
+      <p>or choose files from your computer</p>
 
-  </section>
+      <label class="button" for="fileInput">
+        Choose Files
+      </label>
 
-  <section id="results">
+      <input
+        type="file"
+        id="fileInput"
+        multiple
+      >
 
-    <p class="empty">
-      Your organized documents will appear here.
-    </p>
+    </div>
 
-  </section>
+    <div class="stats">
 
-</main>
+      <div class="stat">
+        <div class="stat-number" id="totalFiles">0</div>
+        <div class="stat-label">Files</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="financeCount">0</div>
+        <div class="stat-label">Finance</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="hrCount">0</div>
+        <div class="stat-label">HR</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="legalCount">0</div>
+        <div class="stat-label">Legal</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="otherCount">0</div>
+        <div class="stat-label">Other</div>
+      </div>
+
+    </div>
+
+    <div id="results" class="results">
+
+      <div class="empty">
+        No documents uploaded yet.
+      </div>
+
+    </div>
+
+  </div>
 
 <script>
 
-function categorizeFile(filename) {
+const uploadBox = document.getElementById("uploadBox");
+const fileInput = document.getElementById("fileInput");
+const results = document.getElementById("results");
+
+const totalFiles = document.getElementById("totalFiles");
+const financeCount = document.getElementById("financeCount");
+const hrCount = document.getElementById("hrCount");
+const legalCount = document.getElementById("legalCount");
+const otherCount = document.getElementById("otherCount");
+
+const categories = [
+  "Finance",
+  "Human Resources",
+  "Legal",
+  "Marketing",
+  "Operations",
+  "Other"
+];
+
+fileInput.addEventListener("change", function() {
+  organizeFiles(fileInput.files);
+});
+
+uploadBox.addEventListener("dragover", function(event) {
+  event.preventDefault();
+  uploadBox.classList.add("dragover");
+});
+
+uploadBox.addEventListener("dragleave", function() {
+  uploadBox.classList.remove("dragover");
+});
+
+uploadBox.addEventListener("drop", function(event) {
+  event.preventDefault();
+
+  uploadBox.classList.remove("dragover");
+
+  organizeFiles(event.dataTransfer.files);
+});
+
+function getCategory(filename) {
 
   const name = filename.toLowerCase();
 
-  // FINANCE
   if (
     name.includes("invoice") ||
     name.includes("receipt") ||
     name.includes("payment") ||
-    name.includes("expense") ||
-    name.includes("bill")
-  ) {
-    return "💰 Finance";
-  }
-
-  // HR
-  if (
-    name.includes("employee") ||
-    name.includes("contract") ||
-    name.includes("resume") ||
-    name.includes("cv") ||
     name.includes("salary") ||
-    name.includes("hr")
+    name.includes("budget") ||
+    name.includes("tax")
   ) {
-    return "👥 Human Resources";
+    return "Finance";
   }
 
-  // LEGAL
   if (
-    name.includes("legal") ||
+    name.includes("cv") ||
+    name.includes("resume") ||
+    name.includes("employee") ||
+    name.includes("hr") ||
+    name.includes("contractor") ||
+    name.includes("payroll")
+  ) {
+    return "Human Resources";
+  }
+
+  if (
+    name.includes("contract") ||
     name.includes("agreement") ||
+    name.includes("legal") ||
     name.includes("nda") ||
-    name.includes("license") ||
     name.includes("terms")
   ) {
-    return "⚖️ Legal";
+    return "Legal";
   }
 
-  // MARKETING
   if (
     name.includes("marketing") ||
     name.includes("campaign") ||
     name.includes("advert") ||
-    name.includes("social") ||
-    name.includes("promotion")
+    name.includes("social")
   ) {
-    return "📣 Marketing";
+    return "Marketing";
   }
 
-  // OPERATIONS
   if (
-    name.includes("policy") ||
-    name.includes("procedure") ||
+    name.includes("project") ||
     name.includes("report") ||
-    name.includes("operations") ||
-    name.includes("manual")
+    name.includes("meeting") ||
+    name.includes("operations")
   ) {
-    return "⚙️ Operations";
+    return "Operations";
   }
 
-  // DEFAULT
-  return "📄 Other";
+  return "Other";
 }
 
+function cleanFilename(filename) {
 
-function organizeFiles() {
+  const extension = filename.includes(".")
+    ? filename.substring(filename.lastIndexOf("."))
+    : "";
 
-  const input = document.getElementById("fileInput");
+  let name = filename.replace(extension, "");
 
-  const results = document.getElementById("results");
+  name = name
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  name = name
+    .split(" ")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join("_");
+
+  return name + extension.toLowerCase();
+}
+
+function organizeFiles(files) {
+
+  const grouped = {};
+
+  categories.forEach(category => {
+    grouped[category] = [];
+  });
+
+  Array.from(files).forEach(file => {
+
+    const category = getCategory(file.name);
+
+    grouped[category].push({
+      original: file.name,
+      suggested: cleanFilename(file.name)
+    });
+
+  });
+
+  displayResults(grouped);
+
+}
+
+function displayResults(grouped) {
 
   results.innerHTML = "";
 
-  if (input.files.length === 0) {
+  let total = 0;
 
-    results.innerHTML =
-      '<p class="empty">Please select some documents first.</p>';
+  categories.forEach(category => {
 
-    return;
-  }
+    const files = grouped[category];
 
-  const categories = {};
+    total += files.length;
 
-  for (const file of input.files) {
-
-    const category = categorizeFile(file.name);
-
-    if (!categories[category]) {
-      categories[category] = [];
+    if (files.length === 0) {
+      return;
     }
 
-    categories[category].push(file.name);
-  }
+    const categoryBox = document.createElement("div");
 
-  for (const category in categories) {
+    categoryBox.className = "category";
 
-    const box = document.createElement("div");
+    categoryBox.innerHTML = `
+      <h2>${category} (${files.length})</h2>
+    `;
 
-    box.className = "category";
+    files.forEach(file => {
 
-    const title = document.createElement("h3");
+      const fileBox = document.createElement("div");
 
-    title.textContent = category;
+      fileBox.className = "file";
 
-    box.appendChild(title);
+      fileBox.innerHTML = `
+        <div class="original">
+          ${escapeHtml(file.original)}
+        </div>
 
-    categories[category].forEach(function(filename) {
+        <div class="suggestion">
+          Suggested name: ${escapeHtml(file.suggested)}
+        </div>
+      `;
 
-      const fileElement = document.createElement("div");
-
-      fileElement.className = "file";
-
-      fileElement.textContent = "📄 " + filename;
-
-      box.appendChild(fileElement);
+      categoryBox.appendChild(fileBox);
 
     });
 
-    results.appendChild(box);
-  }
+    results.appendChild(categoryBox);
+
+  });
+
+  totalFiles.textContent = total;
+
+  financeCount.textContent = grouped["Finance"].length;
+
+  hrCount.textContent = grouped["Human Resources"].length;
+
+  legalCount.textContent = grouped["Legal"].length;
+
+  otherCount.textContent =
+    grouped["Other"].length +
+    grouped["Marketing"].length +
+    grouped["Operations"].length;
+
+}
+
+function escapeHtml(text) {
+
+  const div = document.createElement("div");
+
+  div.textContent = text;
+
+  return div.innerHTML;
 
 }
 
