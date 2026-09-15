@@ -1,16 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>SmartDoc Organizer</title>
-
-  <!-- PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
-
-  <!-- Tesseract OCR -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <style>
     * {
@@ -20,7 +14,7 @@
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #f4f7fb;
+      background: #f5f7fb;
       color: #1f2937;
     }
 
@@ -32,6 +26,7 @@
 
     h1 {
       margin-bottom: 8px;
+      font-size: 34px;
     }
 
     .subtitle {
@@ -40,13 +35,13 @@
     }
 
     .upload-box {
-      display: block;
-      border: 2px dashed #9ca3af;
-      border-radius: 14px;
-      padding: 45px 20px;
-      text-align: center;
       background: white;
+      border: 2px dashed #9ca3af;
+      border-radius: 16px;
+      padding: 50px 20px;
+      text-align: center;
       cursor: pointer;
+      transition: 0.2s;
     }
 
     .upload-box:hover,
@@ -58,7 +53,11 @@
     .upload-box strong {
       display: block;
       font-size: 20px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+    }
+
+    .upload-box span {
+      color: #6b7280;
     }
 
     #fileInput {
@@ -66,1386 +65,1442 @@
     }
 
     .status {
-      display: none;
       margin-top: 20px;
-      padding: 15px;
+      padding: 14px;
       border-radius: 10px;
-      background: white;
+      background: #eef2ff;
+      color: #3730a3;
+      display: none;
     }
 
-    .result {
-      display: none;
-      margin-top: 25px;
+    .results {
+      margin-top: 30px;
+    }
+
+    .result-card {
       background: white;
-      border-radius: 14px;
-      padding: 25px;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
     }
 
     .success {
-      padding: 12px;
-      background: #ecfdf5;
-      border-radius: 8px;
-      margin-bottom: 20px;
+      color: #15803d;
       font-weight: bold;
+      margin-bottom: 20px;
     }
 
     .field {
-      margin-bottom: 15px;
+      margin-bottom: 16px;
     }
 
     .field label {
       display: block;
-      margin-bottom: 5px;
       font-size: 13px;
       font-weight: bold;
       color: #6b7280;
+      margin-bottom: 6px;
     }
 
     .field input {
       width: 100%;
-      padding: 10px;
+      padding: 11px 12px;
       border: 1px solid #d1d5db;
-      border-radius: 7px;
+      border-radius: 8px;
       font-size: 15px;
     }
 
-    .filename {
-      margin-top: 8px;
-      padding: 12px;
+    .field input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+    }
+
+    .filename-preview {
       background: #f3f4f6;
+      padding: 12px;
       border-radius: 8px;
       font-family: monospace;
-      word-break: break-all;
+      word-break: break-word;
     }
 
     button {
-      border: 0;
-      border-radius: 8px;
+      border: none;
+      border-radius: 9px;
       padding: 11px 16px;
-      cursor: pointer;
+      font-size: 14px;
       font-weight: bold;
-      margin-top: 12px;
+      cursor: pointer;
       margin-right: 8px;
+      margin-top: 8px;
     }
 
-    .download-btn {
+    .primary-btn {
       background: #2563eb;
       color: white;
     }
 
-    .copy-btn {
-      background: #111827;
-      color: white;
+    .primary-btn:hover {
+      background: #1d4ed8;
     }
 
-    .raw-btn {
+    .secondary-btn {
       background: #e5e7eb;
       color: #111827;
     }
 
+    .secondary-btn:hover {
+      background: #d1d5db;
+    }
+
     .raw-text {
+      margin-top: 20px;
       display: none;
-      margin-top: 15px;
-      padding: 15px;
-      background: #111827;
-      color: white;
+    }
+
+    .raw-text textarea {
+      width: 100%;
+      min-height: 220px;
+      padding: 12px;
+      border: 1px solid #d1d5db;
       border-radius: 8px;
-      white-space: pre-wrap;
-      max-height: 400px;
-      overflow: auto;
+      font-family: monospace;
+      resize: vertical;
+    }
+
+    .small {
       font-size: 13px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+
+    .error {
+      background: #fef2f2;
+      color: #b91c1c;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 20px;
+      display: none;
     }
   </style>
 </head>
 
 <body>
 
-<div class="container">
+  <div class="container">
 
-  <h1>SmartDoc Organizer</h1>
+    <h1>SmartDoc Organizer</h1>
 
-  <div class="subtitle">
-    Upload a document and SmartDoc will read, understand and organize it.
+    <p class="subtitle">
+      Upload a document and SmartDoc will read, understand and organize it.
+    </p>
+
+    <div
+      class="upload-box"
+      id="uploadBox"
+    >
+      <strong>Drop a PDF here or click to choose a PDF</strong>
+      <span>
+        SmartDoc can read normal PDFs and scanned PDFs using OCR.
+      </span>
+
+      <input
+        type="file"
+        id="fileInput"
+        accept="application/pdf,.pdf"
+      />
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="error" id="errorBox"></div>
+
+    <div class="results" id="results"></div>
+
   </div>
 
-  <label class="upload-box" id="uploadBox">
 
-    <strong>Drop a PDF here</strong>
+  <!-- OCR ENGINE -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
-    <span>or click to choose a PDF</span>
 
-    <br><br>
+  <!--
+    IMPORTANT:
+    PDF.js and the application are inside the SAME module.
+    This prevents the loading problem from the previous version.
+  -->
+  <script type="module">
 
-    <small>
-      SmartDoc can read normal PDFs and scanned PDFs using OCR.
-    </small>
+    import * as pdfjsLib from
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs";
 
-    <input
-      type="file"
-      id="fileInput"
-      accept=".pdf,application/pdf"
-    >
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs";
 
-  </label>
 
-  <div id="status" class="status"></div>
+    // --------------------------------------------------
+    // ELEMENTS
+    // --------------------------------------------------
 
-  <div id="result" class="result"></div>
+    const uploadBox = document.getElementById("uploadBox");
+    const fileInput = document.getElementById("fileInput");
+    const statusBox = document.getElementById("status");
+    const errorBox = document.getElementById("errorBox");
+    const results = document.getElementById("results");
 
-</div>
 
+    // --------------------------------------------------
+    // CURRENT FILE
+    // --------------------------------------------------
 
-<script>
+    let currentFile = null;
 
-let currentFile = null;
-let currentSuggestedFilename = "";
-let currentRawText = "";
-let pdfjsReady = false;
 
+    // --------------------------------------------------
+    // UPLOAD EVENTS
+    // --------------------------------------------------
 
-/* --------------------------------
-   LOAD PDF.JS
--------------------------------- */
+    uploadBox.addEventListener("click", () => {
+      fileInput.click();
+    });
 
-async function loadPdfJs() {
 
-  if (window.pdfjsLib) {
-    pdfjsReady = true;
-    return;
-  }
+    fileInput.addEventListener("change", () => {
 
-  try {
-
-    const module =
-      await import(
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs"
-      );
-
-    window.pdfjsLib = module;
-
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
-
-    pdfjsReady = true;
-
-  } catch (error) {
-
-    console.error("PDF.js failed to load:", error);
-
-    throw new Error(
-      "PDF reader could not load."
-    );
-  }
-}
-
-
-/* --------------------------------
-   STATUS
--------------------------------- */
-
-function setStatus(message) {
-
-  const status =
-    document.getElementById("status");
-
-  status.textContent = message;
-  status.style.display = "block";
-}
-
-
-/* --------------------------------
-   CLEAN TEXT
--------------------------------- */
-
-function cleanText(text) {
-
-  return (text || "")
-    .replace(/\r/g, " ")
-    .replace(/\n+/g, "\n")
-    .replace(/[ \t]+/g, " ")
-    .trim();
-}
-
-
-/* --------------------------------
-   DOCUMENT TYPE
--------------------------------- */
-
-function detectDocumentType(text) {
-
-  const lower =
-    text
-      .toLowerCase()
-      .replace(/\s+/g, " ")
-      .trim();
-
-  if (
-    /\binvoice\b/i.test(lower) ||
-    /\bfacture\b/i.test(lower) ||
-    /\btotal\s+(due|amount|ttc)\b/i.test(lower)
-  ) {
-    return "Invoice";
-  }
-
-  if (
-    /\breceipt\b/i.test(lower) ||
-    /\breçu\b/i.test(lower) ||
-    /\bticket\s+de\s+caisse\b/i.test(lower)
-  ) {
-    return "Receipt";
-  }
-
-  const resumeSignals = [
-    /\bresume\b/i,
-    /\bcurriculum vitae\b/i,
-    /\bresume samples\b/i,
-    /\bwork history\b/i,
-    /\bprofessional accomplishments\b/i,
-    /\bprofessional experience\b/i,
-    /\bprofessional experiences\b/i,
-    /\bexperiences professionnelles\b/i,
-    /\beducation\b/i,
-    /\bsummary of qualifications\b/i,
-    /\bcompétences\b/i,
-    /\blangues\b/i,
-    /\bobjective\b/i
-  ];
-
-  let resumeScore = 0;
-
-  for (const signal of resumeSignals) {
-
-    if (signal.test(lower)) {
-      resumeScore++;
-    }
-  }
-
-  if (resumeScore >= 2) {
-    return "Resume / CV";
-  }
-
-
-  const contractSignals = [
-    /\bcontract\b/i,
-    /\bagreement\b/i,
-    /\bcontrat\b/i,
-    /\bterms and conditions\b/i,
-    /\bsignature\b.*\bdate\b/i
-  ];
-
-  let contractScore = 0;
-
-  for (const signal of contractSignals) {
-
-    if (signal.test(lower)) {
-      contractScore++;
-    }
-  }
-
-  if (contractScore >= 2) {
-    return "Contract";
-  }
-
-
-  if (
-    /\bmarketing campaign\b/i.test(lower) ||
-    /\bmarketing plan\b/i.test(lower) ||
-    /\bcampagne marketing\b/i.test(lower)
-  ) {
-    return "Marketing";
-  }
-
-
-  if (
-    /\boperations report\b/i.test(lower) ||
-    /\boperations manual\b/i.test(lower) ||
-    /\bprocédure opérationnelle\b/i.test(lower)
-  ) {
-    return "Operations";
-  }
-
-  return "Document";
-}
-
-
-/* --------------------------------
-   EMAIL
--------------------------------- */
-
-function extractEmail(text) {
-
-  const match =
-    text.match(
-      /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
-    );
-
-  return match ? match[0] : "";
-}
-
-
-/* --------------------------------
-   PHONE
--------------------------------- */
-
-function extractPhone(text) {
-
-  const matches =
-    text.match(
-      /(?:\+?\d[\d\s().-]{7,}\d)/g
-    );
-
-  if (!matches) {
-    return "";
-  }
-
-  return matches[0].trim();
-}
-
-
-/* --------------------------------
-   BIRTH DATE
--------------------------------- */
-
-function extractBirthDate(text) {
-
-  const patterns = [
-
-    /\b\d{1,2}\s+(jan(?:uary|vier)?|feb(?:ruary|ruary)?|mars|march|avr(?:il)?|april|mai|may|juin|june|juil(?:let)?|july|août|august|sept(?:embre|ember)?|oct(?:obre|ober)?|nov(?:embre|ember)?|déc(?:embre)?|december)\.?\s+\d{4}\b/i,
-
-    /\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4}\b/,
-
-    /\b\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2}\b/
-  ];
-
-  for (const pattern of patterns) {
-
-    const match =
-      text.match(pattern);
-
-    if (match) {
-      return match[0];
-    }
-  }
-
-  return "";
-}
-
-
-/* --------------------------------
-   LOCATION
--------------------------------- */
-
-function extractLocation(text) {
-
-  const locations = [
-    "Marrakech",
-    "Casablanca",
-    "Rabat",
-    "Agadir",
-    "Tangier",
-    "Tanger",
-    "Fez",
-    "Fes",
-    "Meknes",
-    "Oujda",
-    "Bellevue",
-    "Omaha",
-    "New York",
-    "Chicago",
-    "Boston",
-    "Los Angeles"
-  ];
-
-  for (const location of locations) {
-
-    const regex =
-      new RegExp(
-        "\\b" + location + "\\b",
-        "i"
-      );
-
-    if (regex.test(text)) {
-      return location;
-    }
-  }
-
-  return "";
-}
-
-
-/* --------------------------------
-   LANGUAGES
--------------------------------- */
-
-function extractLanguages(text) {
-
-  const found = [];
-
-  const languages = [
-    ["French", /\bfrench\b|\bfrançais\b/i],
-    ["English", /\benglish\b|\banglais\b/i],
-    ["Arabic", /\barabic\b|\barabe\b/i],
-    ["Spanish", /\bspanish\b|\bespañol\b/i],
-    ["German", /\bgerman\b|\ballemand\b/i],
-    ["Italian", /\bitalian\b|\bitalien\b/i]
-  ];
-
-  for (const item of languages) {
-
-    if (item[1].test(text)) {
-      found.push(item[0]);
-    }
-  }
-
-  return found.join(", ");
-}
-
-
-/* --------------------------------
-   PROFESSION
--------------------------------- */
-
-function extractProfession(text) {
-
-  const professions = [
-
-    ["Barman / Mixologist", /barman|mixologist|bartender/i],
-
-    ["Manager", /\bmanager\b|management/i],
-
-    ["Accountant", /accountant|accounting/i],
-
-    ["Marketing", /marketing|public relations/i],
-
-    ["Developer", /software developer|web developer|\bdeveloper\b/i],
-
-    ["Designer", /graphic designer|\bdesigner\b/i],
-
-    ["Engineer", /\bengineer\b|engineering/i],
-
-    ["Teacher", /\bteacher\b|teaching/i],
-
-    ["Chef", /\bchef\b|cook/i],
-
-    ["Sales", /sales representative|sales manager|\bsales\b/i]
-  ];
-
-  for (const item of professions) {
-
-    if (item[1].test(text)) {
-      return item[0];
-    }
-  }
-
-  return "";
-}
-
-
-/* --------------------------------
-   NAME
--------------------------------- */
-
-function extractName(text) {
-
-  const lines =
-    text
-      .split("\n")
-      .map(line => line.trim())
-      .filter(Boolean);
-
-  const email =
-    extractEmail(text);
-
-  for (
-    let i = 0;
-    i < Math.min(lines.length, 40);
-    i++
-  ) {
-
-    const line = lines[i];
-
-    if (
-      email &&
-      line.includes(email)
-    ) {
-      continue;
-    }
-
-    if (
-      /resume samples/i.test(line) ||
-      /curriculum vitae/i.test(line) ||
-      /professional experience/i.test(line) ||
-      /experiences professionnelles/i.test(line) ||
-      /education/i.test(line) ||
-      /languages/i.test(line) ||
-      /compétences/i.test(line) ||
-      /summary of qualifications/i.test(line)
-    ) {
-      continue;
-    }
-
-    if (/^KHALID$/i.test(line)) {
-      return line;
-    }
-
-    if (
-      /^[A-ZÀ-Ÿ][A-ZÀ-Ÿa-zà-ÿ'’-]{2,20}(?:\s+[A-ZÀ-Ÿ][A-ZÀ-Ÿa-zà-ÿ'’-]{2,20}){1,3}$/
-        .test(line)
-    ) {
-
-      if (
-        line.length < 50 &&
-        !/\d/.test(line)
-      ) {
-        return line;
+      if (fileInput.files.length > 0) {
+        handleFile(fileInput.files[0]);
       }
+
+    });
+
+
+    uploadBox.addEventListener("dragover", (event) => {
+
+      event.preventDefault();
+
+      uploadBox.classList.add("dragover");
+
+    });
+
+
+    uploadBox.addEventListener("dragleave", () => {
+
+      uploadBox.classList.remove("dragover");
+
+    });
+
+
+    uploadBox.addEventListener("drop", (event) => {
+
+      event.preventDefault();
+
+      uploadBox.classList.remove("dragover");
+
+      const files = event.dataTransfer.files;
+
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+
+    });
+
+
+    // --------------------------------------------------
+    // HANDLE FILE
+    // --------------------------------------------------
+
+    async function handleFile(file) {
+
+      hideError();
+
+      results.innerHTML = "";
+
+      currentFile = file;
+
+      if (!file.name.toLowerCase().endsWith(".pdf")) {
+
+        showError("Please upload a PDF file.");
+
+        return;
+      }
+
+
+      try {
+
+        showStatus("Loading PDF...");
+
+        const arrayBuffer = await file.arrayBuffer();
+
+        const pdf = await pdfjsLib.getDocument({
+          data: arrayBuffer
+        }).promise;
+
+
+        showStatus(
+          `PDF loaded successfully. ${pdf.numPages} page(s) found.`
+        );
+
+
+        // --------------------------------------------------
+        // FIRST: TRY NORMAL PDF TEXT
+        // --------------------------------------------------
+
+        let extractedText = "";
+
+        const pagesToRead = Math.min(pdf.numPages, 10);
+
+        for (let pageNumber = 1; pageNumber <= pagesToRead; pageNumber++) {
+
+          showStatus(
+            `Reading PDF text... page ${pageNumber} of ${pagesToRead}`
+          );
+
+          const page = await pdf.getPage(pageNumber);
+
+          const textContent = await page.getTextContent();
+
+          const pageText = textContent.items
+            .map(item => item.str || "")
+            .join(" ");
+
+          extractedText += "\n" + pageText;
+        }
+
+
+        extractedText = cleanText(extractedText);
+
+
+        // --------------------------------------------------
+        // IF PDF HAS VERY LITTLE TEXT -> OCR
+        // --------------------------------------------------
+
+        let usedOCR = false;
+
+        if (extractedText.replace(/\s/g, "").length < 30) {
+
+          usedOCR = true;
+
+          showStatus(
+            "This looks like a scanned PDF. Starting OCR..."
+          );
+
+          extractedText = await runOCR(pdf);
+
+          extractedText = cleanText(extractedText);
+        }
+
+
+        if (!extractedText.trim()) {
+
+          showError(
+            "SmartDoc could not extract readable text from this PDF."
+          );
+
+          return;
+        }
+
+
+        displayResult(
+          file,
+          extractedText,
+          usedOCR
+        );
+
+
+        showStatus("Document successfully analyzed.");
+
+      } catch (error) {
+
+        console.error(error);
+
+        showError(
+          "Something went wrong while analyzing the PDF. Please try again."
+        );
+
+      }
+
     }
-  }
-
-  return "";
-}
 
 
-/* --------------------------------
-   SAFE FILENAME
--------------------------------- */
+    // --------------------------------------------------
+    // OCR
+    // --------------------------------------------------
 
-function safeFilenamePart(value) {
+    async function runOCR(pdf) {
 
-  return (value || "")
-    .replace(/[<>:"/\\|?*]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+      if (!window.Tesseract) {
 
-
-/* --------------------------------
-   MAKE FILENAME
--------------------------------- */
-
-function makeFilename(info, originalName) {
-
-  const parts = [];
-
-  if (info.name) {
-    parts.push(
-      safeFilenamePart(info.name)
-    );
-  }
-
-  if (info.profession) {
-    parts.push(
-      safeFilenamePart(info.profession)
-    );
-  }
-
-  if (info.documentType) {
-    parts.push(
-      safeFilenamePart(
-        info.documentType.replace(/\//g, "-")
-      )
-    );
-  }
-
-  if (info.location) {
-    parts.push(
-      safeFilenamePart(info.location)
-    );
-  }
-
-  if (parts.length === 0) {
-
-    return (
-      safeFilenamePart(
-        originalName.replace(/\.pdf$/i, "")
-      ) + ".pdf"
-    );
-  }
-
-  return parts.join("_") + ".pdf";
-}
+        throw new Error(
+          "Tesseract OCR did not load."
+        );
+      }
 
 
-/* --------------------------------
-   EXTRACT PDF TEXT
--------------------------------- */
+      let ocrText = "";
 
-async function extractPdfText(file) {
-
-  await loadPdfJs();
-
-  const buffer =
-    await file.arrayBuffer();
-
-  const pdf =
-    await window.pdfjsLib
-      .getDocument({
-        data: buffer
-      })
-      .promise;
-
-  let text = "";
-
-  const maxPages =
-    Math.min(pdf.numPages, 10);
-
-  for (
-    let pageNumber = 1;
-    pageNumber <= maxPages;
-    pageNumber++
-  ) {
-
-    setStatus(
-      "Reading PDF page " +
-      pageNumber +
-      " of " +
-      maxPages +
-      "..."
-    );
-
-    const page =
-      await pdf.getPage(pageNumber);
-
-    const content =
-      await page.getTextContent();
-
-    const pageText =
-      content.items
-        .map(item => item.str)
-        .join(" ");
-
-    text += "\n" + pageText;
-  }
-
-  return {
-    text: cleanText(text),
-    pdf: pdf
-  };
-}
+      const pagesToOCR = Math.min(pdf.numPages, 3);
 
 
-/* --------------------------------
-   OCR
--------------------------------- */
-
-async function runOCR(file, pdf) {
-
-  let text = "";
-
-  const maxPages =
-    Math.min(pdf.numPages, 3);
-
-  for (
-    let pageNumber = 1;
-    pageNumber <= maxPages;
-    pageNumber++
-  ) {
-
-    setStatus(
-      "Preparing OCR page " +
-      pageNumber +
-      " of " +
-      maxPages +
-      "..."
-    );
-
-    const page =
-      await pdf.getPage(pageNumber);
-
-    const viewport =
-      page.getViewport({
-        scale: 2.5
-      });
-
-    const canvas =
-      document.createElement("canvas");
-
-    const context =
-      canvas.getContext("2d");
-
-    canvas.width =
-      viewport.width;
-
-    canvas.height =
-      viewport.height;
-
-    await page.render({
-      canvasContext: context,
-      viewport: viewport
-    }).promise;
-
-
-    const result =
-      await Tesseract.recognize(
-        canvas,
+      const worker = await Tesseract.createWorker(
         "eng",
+        1,
         {
           logger: message => {
 
             if (
-              message.status ===
-              "recognizing text"
+              message.status &&
+              typeof message.progress === "number"
             ) {
 
               const percent =
-                Math.round(
-                  (message.progress || 0) * 100
-                );
+                Math.round(message.progress * 100);
 
-              setStatus(
-                "OCR in progress — page " +
-                pageNumber +
-                ": " +
-                percent +
-                "%"
+              showStatus(
+                `OCR: ${message.status} — ${percent}%`
               );
+
             }
+
           }
         }
       );
 
-    text +=
-      "\n" +
-      result.data.text;
-  }
 
-  return cleanText(text);
-}
+      try {
+
+        for (
+          let pageNumber = 1;
+          pageNumber <= pagesToOCR;
+          pageNumber++
+        ) {
+
+          showStatus(
+            `Preparing scanned page ${pageNumber} of ${pagesToOCR}...`
+          );
 
 
-/* --------------------------------
-   ANALYZE
--------------------------------- */
+          const page = await pdf.getPage(pageNumber);
 
-async function analyzeFile(file) {
 
-  currentFile = file;
+          const viewport = page.getViewport({
+            scale: 2.5
+          });
 
-  setStatus(
-    "Starting analysis..."
-  );
 
-  const pdfResult =
-    await extractPdfText(file);
+          const canvas = document.createElement("canvas");
 
-  let text =
-    pdfResult.text;
+          const context = canvas.getContext("2d");
 
-  let usedOCR = false;
 
-  if (
-    text.replace(/\s/g, "").length < 30
-  ) {
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
 
-    usedOCR = true;
 
-    setStatus(
-      "Scanned PDF detected. Starting OCR..."
-    );
+          await page.render({
+            canvasContext: context,
+            viewport: viewport
+          }).promise;
 
-    text =
-      await runOCR(
-        file,
-        pdfResult.pdf
+
+          showStatus(
+            `OCR scanning page ${pageNumber} of ${pagesToOCR}...`
+          );
+
+
+          const result = await worker.recognize(canvas);
+
+          ocrText += "\n" + result.data.text;
+
+
+          canvas.width = 1;
+          canvas.height = 1;
+        }
+
+      } finally {
+
+        await worker.terminate();
+
+      }
+
+
+      return ocrText;
+
+    }
+
+
+    // --------------------------------------------------
+    // CLEAN TEXT
+    // --------------------------------------------------
+
+    function cleanText(text) {
+
+      return text
+        .replace(/\r/g, "\n")
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n\s*\n\s*\n+/g, "\n\n")
+        .trim();
+
+    }
+
+
+    // --------------------------------------------------
+    // DOCUMENT TYPE
+    // --------------------------------------------------
+
+    function detectDocumentType(text) {
+
+      const lower =
+        text.toLowerCase()
+          .replace(/\s+/g, " ")
+          .trim();
+
+
+      // INVOICE
+
+      if (
+        /\binvoice\s*(number|no|#|date)?\b/i.test(lower) ||
+        /\bfacture\s*(n°|no|numero|numéro|date)?\b/i.test(lower) ||
+        /\btotal\s+(due|amount|ttc)\b/i.test(lower)
+      ) {
+
+        return "Invoice";
+      }
+
+
+      // RECEIPT
+
+      if (
+        /\breceipt\b/i.test(lower) ||
+        /\breçu\b/i.test(lower) ||
+        /\bticket\s+de\s+caisse\b/i.test(lower)
+      ) {
+
+        return "Receipt";
+      }
+
+
+      // RESUME / CV
+
+      const resumeSignals = [
+
+        /\bresume\b/i,
+        /\bcurriculum vitae\b/i,
+        /\bresume samples\b/i,
+        /\bwork history\b/i,
+        /\bprofessional accomplishments\b/i,
+        /\bprofessional experience\b/i,
+        /\bprofessional experiences\b/i,
+        /\bexperiences professionnelles\b/i,
+        /\beducation\b/i,
+        /\bsummary of qualifications\b/i,
+        /\bcompétences\b/i,
+        /\blangues\b/i
+
+      ];
+
+
+      let resumeScore = 0;
+
+      for (const signal of resumeSignals) {
+
+        if (signal.test(lower)) {
+          resumeScore++;
+        }
+
+      }
+
+
+      if (resumeScore >= 2) {
+
+        return "Resume / CV";
+      }
+
+
+      // CONTRACT
+
+      const contractSignals = [
+
+        /\bcontract\b/i,
+        /\bagreement\b/i,
+        /\bcontrat\b/i,
+        /\bparties\b.*\bagree\b/i,
+        /\bterms and conditions\b/i,
+        /\bsignature\b.*\bdate\b/i
+
+      ];
+
+
+      let contractScore = 0;
+
+      for (const signal of contractSignals) {
+
+        if (signal.test(lower)) {
+          contractScore++;
+        }
+
+      }
+
+
+      if (contractScore >= 2) {
+
+        return "Contract";
+      }
+
+
+      // MARKETING
+
+      if (
+        /\bmarketing campaign\b/i.test(lower) ||
+        /\bmarketing plan\b/i.test(lower) ||
+        /\bcampagne marketing\b/i.test(lower)
+      ) {
+
+        return "Marketing";
+      }
+
+
+      // OPERATIONS
+
+      if (
+        /\boperations report\b/i.test(lower) ||
+        /\boperations manual\b/i.test(lower) ||
+        /\bprocédure opérationnelle\b/i.test(lower)
+      ) {
+
+        return "Operations";
+      }
+
+
+      return "Document";
+
+    }
+
+
+    // --------------------------------------------------
+    // FIELD EXTRACTION
+    // --------------------------------------------------
+
+    function extractEmail(text) {
+
+      const match = text.match(
+        /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
       );
-  }
 
-  currentRawText =
-    text;
+      return match ? match[0] : "";
 
-  displayResult(
-    file,
-    text,
-    usedOCR
-  );
-}
+    }
 
 
-/* --------------------------------
-   DISPLAY RESULT
--------------------------------- */
+    function extractPhone(text) {
 
-function displayResult(
-  file,
-  text,
-  usedOCR
-) {
+      const matches = text.match(
+        /(?:\+?\d[\d\s().-]{7,}\d)/g
+      );
 
-  const clean =
-    cleanText(text);
 
-  const info = {
+      if (!matches) {
+        return "";
+      }
 
-    documentType:
-      detectDocumentType(clean),
 
-    name:
-      extractName(clean),
+      return matches
+        .map(value => value.trim())
+        .find(value => value.replace(/\D/g, "").length >= 8) || "";
 
-    profession:
-      extractProfession(clean),
+    }
 
-    location:
-      extractLocation(clean),
 
-    email:
-      extractEmail(clean),
+    function extractLocation(text) {
 
-    phone:
-      extractPhone(clean),
+      const lower = text.toLowerCase();
 
-    languages:
-      extractLanguages(clean),
 
-    birthDate:
-      extractBirthDate(clean)
-  };
+      const locations = [
 
-  currentSuggestedFilename =
-    makeFilename(
-      info,
-      file.name
-    );
+        "Marrakech",
+        "Marrakesh",
+        "Casablanca",
+        "Rabat",
+        "Agadir",
+        "Tangier",
+        "Fes",
+        "Fez",
+        "Meknes",
+        "Oujda",
+        "Paris",
+        "London",
+        "New York",
+        "Dubai",
+        "Bellevue",
+        "Nebraska"
 
+      ];
 
-  const result =
-    document.getElementById(
-      "result"
-    );
 
-  result.innerHTML = "";
+      for (const location of locations) {
 
+        if (
+          lower.includes(location.toLowerCase())
+        ) {
 
-  const success =
-    document.createElement("div");
+          return location;
+        }
 
-  success.className =
-    "success";
+      }
 
-  success.textContent =
-    "✓ Document successfully analyzed";
 
-  result.appendChild(
-    success
-  );
+      return "";
 
+    }
 
-  const fileName =
-    document.createElement("p");
 
-  fileName.innerHTML =
-    "<strong>" +
-    escapeHtml(file.name) +
-    "</strong>";
+    function extractProfession(text) {
 
-  result.appendChild(
-    fileName
-  );
+      const lower = text.toLowerCase();
 
 
-  const method =
-    document.createElement("p");
+      const professions = [
 
-  method.innerHTML =
-    "<strong>Analysis method:</strong> " +
-    (usedOCR ? "OCR" : "PDF text");
+        {
+          keywords: [
+            "barman",
+            "mixologue",
+            "mixologist"
+          ],
+          name: "Barman / Mixologist"
+        },
 
-  result.appendChild(
-    method
-  );
+        {
+          keywords: [
+            "manager",
+            "management"
+          ],
+          name: "Manager"
+        },
 
+        {
+          keywords: [
+            "developer",
+            "software engineer",
+            "web developer"
+          ],
+          name: "Developer"
+        },
 
-  addField(
-    result,
-    "Document type",
-    info.documentType
-  );
+        {
+          keywords: [
+            "accountant",
+            "comptable"
+          ],
+          name: "Accountant"
+        },
 
-  addField(
-    result,
-    "Name",
-    info.name
-  );
+        {
+          keywords: [
+            "designer",
+            "graphic designer"
+          ],
+          name: "Designer"
+        },
 
-  addField(
-    result,
-    "Profession",
-    info.profession
-  );
+        {
+          keywords: [
+            "sales",
+            "commercial"
+          ],
+          name: "Sales"
+        },
 
-  addField(
-    result,
-    "Location",
-    info.location
-  );
+        {
+          keywords: [
+            "marketing"
+          ],
+          name: "Marketing"
+        }
 
-  addField(
-    result,
-    "Email",
-    info.email
-  );
+      ];
 
-  addField(
-    result,
-    "Phone",
-    info.phone
-  );
 
-  addField(
-    result,
-    "Languages",
-    info.languages
-  );
+      for (const profession of professions) {
 
-  addField(
-    result,
-    "Birth date",
-    info.birthDate
-  );
+        for (const keyword of profession.keywords) {
 
+          if (
+            lower.includes(keyword)
+          ) {
 
-  const title =
-    document.createElement("p");
+            return profession.name;
+          }
 
-  title.style.marginTop =
-    "25px";
+        }
 
-  title.innerHTML =
-    "<strong>Suggested filename:</strong>";
+      }
 
-  result.appendChild(
-    title
-  );
 
+      return "";
 
-  const filename =
-    document.createElement("div");
+    }
 
-  filename.className =
-    "filename";
 
-  filename.id =
-    "filenameBox";
+    function extractName(text) {
 
-  filename.textContent =
-    currentSuggestedFilename;
+      const lines = text
+        .split("\n")
+        .map(line => line.trim())
+        .filter(Boolean);
 
-  result.appendChild(
-    filename
-  );
 
+      const blockedWords = [
 
-  const download =
-    document.createElement("button");
+        "resume",
+        "curriculum",
+        "vitae",
+        "education",
+        "experience",
+        "experiences",
+        "professional",
+        "skills",
+        "compétences",
+        "langues",
+        "languages",
+        "contact",
+        "phone",
+        "email",
+        "address",
+        "barman",
+        "mixologist",
+        "manager",
+        "sample"
 
-  download.className =
-    "download-btn";
+      ];
 
-  download.textContent =
-    "Download organized PDF";
 
-  download.onclick =
-    downloadOrganizedFile;
+      for (
+        let i = 0;
+        i < Math.min(lines.length, 20);
+        i++
+      ) {
 
-  result.appendChild(
-    download
-  );
+        const line = lines[i];
 
 
-  const copy =
-    document.createElement("button");
+        if (line.length < 3 || line.length > 50) {
+          continue;
+        }
 
-  copy.className =
-    "copy-btn";
 
-  copy.textContent =
-    "Copy filename";
+        if (/@/.test(line)) {
+          continue;
+        }
 
-  copy.onclick =
-    copyFilename;
 
-  result.appendChild(
-    copy
-  );
+        if (/\d/.test(line)) {
+          continue;
+        }
 
 
-  const rawButton =
-    document.createElement("button");
+        const lower = line.toLowerCase();
 
-  rawButton.className =
-    "raw-btn";
 
-  rawButton.textContent =
-    "Show raw OCR / PDF text";
+        if (
+          blockedWords.some(word =>
+            lower.includes(word)
+          )
+        ) {
 
-  rawButton.onclick =
-    function () {
+          continue;
+        }
 
-      const raw =
-        document.getElementById(
-          "rawText"
+
+        const words = line.split(/\s+/);
+
+
+        if (
+          words.length >= 2 &&
+          words.length <= 5
+        ) {
+
+          return line;
+        }
+
+      }
+
+
+      return "";
+
+    }
+
+
+    // --------------------------------------------------
+    // FILENAME
+    // --------------------------------------------------
+
+    function safeFilenamePart(value) {
+
+      return value
+        .trim()
+        .replace(/[<>:"/\\|?*]+/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+
+    }
+
+
+    function generateFilename(
+      type,
+      name,
+      profession,
+      location
+    ) {
+
+      const parts = [];
+
+
+      if (name) {
+        parts.push(
+          safeFilenamePart(name)
+        );
+      }
+
+
+      if (profession) {
+        parts.push(
+          safeFilenamePart(profession)
+        );
+      }
+
+
+      if (type) {
+
+        parts.push(
+          safeFilenamePart(type)
         );
 
-      raw.style.display =
-        raw.style.display === "block"
-          ? "none"
-          : "block";
-    };
-
-  result.appendChild(
-    rawButton
-  );
+      }
 
 
-  const raw =
-    document.createElement("div");
+      if (location) {
 
-  raw.className =
-    "raw-text";
+        parts.push(
+          safeFilenamePart(location)
+        );
 
-  raw.id =
-    "rawText";
-
-  raw.textContent =
-    clean;
-
-  result.appendChild(
-    raw
-  );
+      }
 
 
-  result.style.display =
-    "block";
+      if (parts.length === 0) {
 
-  setStatus(
-    "Analysis complete."
-  );
-}
+        return "Organized-Document.pdf";
+      }
 
 
-/* --------------------------------
-   EDITABLE FIELD
--------------------------------- */
+      return parts.join("_") + ".pdf";
 
-function addField(
-  container,
-  label,
-  value
-) {
-
-  const field =
-    document.createElement("div");
-
-  field.className =
-    "field";
-
-
-  const labelElement =
-    document.createElement("label");
-
-  labelElement.textContent =
-    label;
-
-
-  const input =
-    document.createElement("input");
-
-  input.value =
-    value || "";
-
-  input.dataset.field =
-    label;
-
-  input.addEventListener(
-    "input",
-    updateFilename
-  );
-
-
-  field.appendChild(
-    labelElement
-  );
-
-  field.appendChild(
-    input
-  );
-
-  container.appendChild(
-    field
-  );
-}
-
-
-/* --------------------------------
-   UPDATE FILENAME
--------------------------------- */
-
-function updateFilename() {
-
-  const inputs =
-    document.querySelectorAll(
-      "#result input"
-    );
-
-  const values = {};
-
-  inputs.forEach(
-    input => {
-
-      values[input.dataset.field] =
-        input.value.trim();
     }
-  );
 
 
-  const info = {
+    // --------------------------------------------------
+    // DISPLAY RESULT
+    // --------------------------------------------------
 
-    name:
-      values["Name"] || "",
+    function displayResult(
+      file,
+      text,
+      usedOCR
+    ) {
 
-    profession:
-      values["Profession"] || "",
-
-    documentType:
-      values["Document type"] ||
-      "Document",
-
-    location:
-      values["Location"] || ""
-  };
+      const type =
+        detectDocumentType(text);
 
 
-  currentSuggestedFilename =
-    makeFilename(
-      info,
-      currentFile
-        ? currentFile.name
-        : "document.pdf"
-    );
+      const name =
+        extractName(text);
 
 
-  const filenameBox =
-    document.getElementById(
-      "filenameBox"
-    );
-
-  if (filenameBox) {
-
-    filenameBox.textContent =
-      currentSuggestedFilename;
-  }
-}
+      const profession =
+        extractProfession(text);
 
 
-/* --------------------------------
-   DOWNLOAD
--------------------------------- */
-
-function downloadOrganizedFile() {
-
-  if (!currentFile) {
-    return;
-  }
-
-  updateFilename();
+      const location =
+        extractLocation(text);
 
 
-  const url =
-    URL.createObjectURL(
-      currentFile
-    );
+      const email =
+        extractEmail(text);
 
 
-  const link =
-    document.createElement("a");
-
-  link.href =
-    url;
-
-  link.download =
-    currentSuggestedFilename;
+      const phone =
+        extractPhone(text);
 
 
-  document.body.appendChild(
-    link
-  );
-
-  link.click();
-
-  link.remove();
-
-
-  setTimeout(
-    function () {
-      URL.revokeObjectURL(url);
-    },
-    1000
-  );
-}
+      const suggestedFilename =
+        generateFilename(
+          type,
+          name,
+          profession,
+          location
+        );
 
 
-/* --------------------------------
-   COPY
--------------------------------- */
+      const resultCard =
+        document.createElement("div");
 
-async function copyFilename() {
-
-  updateFilename();
-
-  try {
-
-    await navigator.clipboard.writeText(
-      currentSuggestedFilename
-    );
-
-    setStatus(
-      "Filename copied."
-    );
-
-  } catch (error) {
-
-    setStatus(
-      "Could not copy filename."
-    );
-  }
-}
+      resultCard.className =
+        "result-card";
 
 
-/* --------------------------------
-   ESCAPE HTML
--------------------------------- */
+      const success =
+        document.createElement("div");
 
-function escapeHtml(value) {
+      success.className =
+        "success";
 
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+      success.textContent =
+        "✓ Document successfully analyzed";
+
+      resultCard.appendChild(success);
 
 
-/* --------------------------------
-   FILE HANDLING
--------------------------------- */
+      // METHOD
 
-const fileInput =
-  document.getElementById(
-    "fileInput"
-  );
+      const method =
+        document.createElement("div");
 
-const uploadBox =
-  document.getElementById(
-    "uploadBox"
-  );
+      method.className =
+        "small";
+
+      method.textContent =
+        "Analysis method: " +
+        (usedOCR ? "OCR" : "PDF text");
+
+      resultCard.appendChild(method);
 
 
-fileInput.addEventListener(
-  "change",
-  function (event) {
+      resultCard.appendChild(
+        createEditableField(
+          "Document type",
+          type
+        )
+      );
 
-    const file =
-      event.target.files[0];
 
-    if (file) {
-      handleFile(file);
+      resultCard.appendChild(
+        createEditableField(
+          "Name",
+          name
+        )
+      );
+
+
+      resultCard.appendChild(
+        createEditableField(
+          "Profession",
+          profession
+        )
+      );
+
+
+      resultCard.appendChild(
+        createEditableField(
+          "Location",
+          location
+        )
+      );
+
+
+      resultCard.appendChild(
+        createEditableField(
+          "Email",
+          email
+        )
+      );
+
+
+      resultCard.appendChild(
+        createEditableField(
+          "Phone",
+          phone
+        )
+      );
+
+
+      // FILENAME SECTION
+
+      const filenameField =
+        document.createElement("div");
+
+      filenameField.className =
+        "field";
+
+
+      const filenameLabel =
+        document.createElement("label");
+
+      filenameLabel.textContent =
+        "Suggested filename";
+
+      filenameField.appendChild(
+        filenameLabel
+      );
+
+
+      const filenameInput =
+        document.createElement("input");
+
+      filenameInput.type =
+        "text";
+
+      filenameInput.value =
+        suggestedFilename;
+
+      filenameInput.id =
+        "filenameInput";
+
+      filenameField.appendChild(
+        filenameInput
+      );
+
+
+      resultCard.appendChild(
+        filenameField
+      );
+
+
+      // DOWNLOAD BUTTON
+
+      const downloadButton =
+        document.createElement("button");
+
+      downloadButton.className =
+        "primary-btn";
+
+      downloadButton.textContent =
+        "Download organized PDF";
+
+
+      downloadButton.addEventListener(
+        "click",
+        () => {
+
+          downloadOrganizedFile(
+            filenameInput.value
+          );
+
+        }
+      );
+
+
+      resultCard.appendChild(
+        downloadButton
+      );
+
+
+      // COPY BUTTON
+
+      const copyButton =
+        document.createElement("button");
+
+      copyButton.className =
+        "secondary-btn";
+
+      copyButton.textContent =
+        "Copy filename";
+
+
+      copyButton.addEventListener(
+        "click",
+        async () => {
+
+          try {
+
+            await navigator.clipboard.writeText(
+              filenameInput.value
+            );
+
+            copyButton.textContent =
+              "Copied!";
+
+            setTimeout(() => {
+
+              copyButton.textContent =
+                "Copy filename";
+
+            }, 1500);
+
+          } catch {
+
+            alert(
+              "Could not copy automatically. Please select the filename and copy it manually."
+            );
+
+          }
+
+        }
+      );
+
+
+      resultCard.appendChild(
+        copyButton
+      );
+
+
+      // RAW TEXT
+
+      const rawSection =
+        document.createElement("div");
+
+      rawSection.className =
+        "raw-text";
+
+
+      const rawLabel =
+        document.createElement("div");
+
+      rawLabel.className =
+        "small";
+
+      rawLabel.textContent =
+        `Extracted text (${text.length} characters)`;
+
+      rawSection.appendChild(
+        rawLabel
+      );
+
+
+      const rawTextarea =
+        document.createElement("textarea");
+
+      rawTextarea.readOnly =
+        true;
+
+      rawTextarea.value =
+        text;
+
+      rawSection.appendChild(
+        rawTextarea
+      );
+
+
+      resultCard.appendChild(
+        rawSection
+      );
+
+
+      const rawButton =
+        document.createElement("button");
+
+      rawButton.className =
+        "secondary-btn";
+
+      rawButton.textContent =
+        "Show extracted text";
+
+
+      rawButton.addEventListener(
+        "click",
+        () => {
+
+          if (
+            rawSection.style.display ===
+            "block"
+          ) {
+
+            rawSection.style.display =
+              "none";
+
+            rawButton.textContent =
+              "Show extracted text";
+
+          } else {
+
+            rawSection.style.display =
+              "block";
+
+            rawButton.textContent =
+              "Hide extracted text";
+
+          }
+
+        }
+      );
+
+
+      resultCard.appendChild(
+        rawButton
+      );
+
+
+      results.appendChild(
+        resultCard
+      );
+
     }
-  }
-);
 
 
-uploadBox.addEventListener(
-  "dragover",
-  function (event) {
+    // --------------------------------------------------
+    // EDITABLE FIELD
+    // --------------------------------------------------
 
-    event.preventDefault();
+    function createEditableField(
+      labelText,
+      value
+    ) {
 
-    uploadBox.classList.add(
-      "dragover"
-    );
-  }
-);
+      const field =
+        document.createElement("div");
 
-
-uploadBox.addEventListener(
-  "dragleave",
-  function () {
-
-    uploadBox.classList.remove(
-      "dragover"
-    );
-  }
-);
+      field.className =
+        "field";
 
 
-uploadBox.addEventListener(
-  "drop",
-  function (event) {
+      const label =
+        document.createElement("label");
 
-    event.preventDefault();
+      label.textContent =
+        labelText;
 
-    uploadBox.classList.remove(
-      "dragover"
-    );
 
-    const file =
-      event.dataTransfer.files[0];
+      const input =
+        document.createElement("input");
 
-    if (file) {
-      handleFile(file);
+      input.type =
+        "text";
+
+      input.value =
+        value || "";
+
+
+      field.appendChild(label);
+
+      field.appendChild(input);
+
+
+      return field;
+
     }
-  }
-);
 
 
-/* --------------------------------
-   HANDLE FILE
--------------------------------- */
+    // --------------------------------------------------
+    // DOWNLOAD
+    // --------------------------------------------------
 
-async function handleFile(file) {
+    function downloadOrganizedFile(
+      filename
+    ) {
 
-  if (
-    file.type !== "application/pdf" &&
-    !file.name
-      .toLowerCase()
-      .endsWith(".pdf")
-  ) {
+      if (!currentFile) {
 
-    setStatus(
-      "Please upload a PDF file."
-    );
+        showError(
+          "There is no PDF available to download."
+        );
 
-    return;
-  }
+        return;
+      }
 
 
-  const result =
-    document.getElementById(
-      "result"
-    );
-
-  result.style.display =
-    "none";
+      let cleanFilename =
+        filename.trim();
 
 
-  try {
+      if (!cleanFilename) {
 
-    await analyzeFile(file);
+        cleanFilename =
+          "Organized-Document.pdf";
+      }
 
-  } catch (error) {
 
-    console.error(error);
+      if (
+        !cleanFilename
+          .toLowerCase()
+          .endsWith(".pdf")
+      ) {
 
-    setStatus(
-      "Something went wrong while analyzing the PDF. Please try again."
-    );
-  }
-}
+        cleanFilename += ".pdf";
+      }
 
-</script>
+
+      cleanFilename =
+        cleanFilename
+          .replace(/[<>:"/\\|?*]+/g, "")
+          .trim();
+
+
+      const url =
+        URL.createObjectURL(
+          currentFile
+        );
+
+
+      const link =
+        document.createElement("a");
+
+
+      link.href =
+        url;
+
+      link.download =
+        cleanFilename;
+
+
+      document.body.appendChild(
+        link
+      );
+
+
+      link.click();
+
+
+      link.remove();
+
+
+      setTimeout(() => {
+
+        URL.revokeObjectURL(url);
+
+      }, 1000);
+
+    }
+
+
+    // --------------------------------------------------
+    // STATUS
+    // --------------------------------------------------
+
+    function showStatus(message) {
+
+      statusBox.style.display =
+        "block";
+
+      statusBox.textContent =
+        message;
+
+    }
+
+
+    function showError(message) {
+
+      errorBox.style.display =
+        "block";
+
+      errorBox.textContent =
+        message;
+
+    }
+
+
+    function hideError() {
+
+      errorBox.style.display =
+        "none";
+
+      errorBox.textContent =
+        "";
+
+    }
+
+  </script>
 
 </body>
 </html>
